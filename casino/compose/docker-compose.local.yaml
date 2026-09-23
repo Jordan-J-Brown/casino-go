@@ -1,0 +1,23 @@
+name: casino
+
+services:
+  casino-db:
+    container_name: postgres
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    ports:
+      - "$PG_PORT:5432"
+    volumes:
+      - /var/lib/postgresql/MAJOR/docker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  nats-data:
