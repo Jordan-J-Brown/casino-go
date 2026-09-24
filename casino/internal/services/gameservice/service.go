@@ -87,7 +87,7 @@ func (service *service) getBetsForEngine(ctx context.Context, engineID string) (
 		return nil, err
 	}
 	if engineReg == nil {
-		return nil, errorx.Newf("engine is not registered: %s", engineID, errorx.WithChildren(err))
+		return nil, errorx.Newf("engine is not registered: %s", engineID)
 	}
 
 	bets, err := service.limitBets(engineReg.MinBet, engineReg.MaxBet, service.cfg.BetSizes)
