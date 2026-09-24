@@ -50,6 +50,8 @@ func main() {
 			}, nil
 		},
 		SetupHandler: func(ctx context.Context, r enginemsg.SetupRequest) (*enginemsg.SetupResponse, error) {
+			logger.DebugContext(ctx, "SETUP")
+
 			gameCfgBs, err := json.Marshal(gameConfig)
 			if err != nil {
 				return nil, err
@@ -69,6 +71,8 @@ func main() {
 			}, nil
 		},
 		PlayHandler: func(ctx context.Context, r enginemsg.PlayRequest) (*enginemsg.RoundResponse, error) {
+			logger.DebugContext(ctx, "PLAY")
+
 			var roundConfig models.RoundConfig
 			if err := json.Unmarshal(r.MetaData, &roundConfig); err != nil {
 				return nil, err
@@ -116,6 +120,8 @@ func main() {
 			return nil, errors.New("next not available")
 		},
 		CloseHandler: func(ctx context.Context, r enginemsg.CloseRequest) (*enginemsg.CloseResponse, error) {
+			logger.DebugContext(ctx, "CLOSE")
+
 			return &enginemsg.CloseResponse{
 				CanClose: true,
 			}, nil
