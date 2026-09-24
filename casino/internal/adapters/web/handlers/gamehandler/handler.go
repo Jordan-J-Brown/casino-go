@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web/handlers/basehandler"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/domain/gamemodels"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/domain/usermodels"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/gameservice"
-	"github.com/Jordan-J-Brown/casino-go/casino/internal/web/handlers/basehandler"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/responses"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"

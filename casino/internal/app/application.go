@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/clients/engineclient"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/config"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/engineregistry"
@@ -12,7 +13,6 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/stores/adapters/game_service_store_adapter"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/stores/engineregstore"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/stores/userwalletstorepg"
-	"github.com/Jordan-J-Brown/casino-go/casino/internal/web"
 	baseconfig "github.com/Jordan-J-Brown/casino-go/pkg/config"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/pgdb"
