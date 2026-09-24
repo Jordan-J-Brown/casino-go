@@ -10,8 +10,8 @@ import (
 )
 
 type Store interface {
-	EngineIsRegistered(ctx context.Context, engineID string) (bool, error)
 	GetRegistration(ctx context.Context, engineID string) (*enginemsg.EngineRegistraton, error)
+	EngineIsRegistered(ctx context.Context, engineID string) (bool, error)
 	PutRegistration(ctx context.Context, reg enginemsg.EngineRegistraton) error
 }
 
@@ -94,5 +94,7 @@ func (service *service) handleRegistration(ctx context.Context) nats.MsgHandler 
 				"error", err,
 			)
 		}
+
+		service.logger.DebugContext(ctx, "Engine_Registered", "engine_id", reg.EngineID)
 	}
 }
