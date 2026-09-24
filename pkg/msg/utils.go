@@ -3,6 +3,7 @@ package msg
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"github.com/nats-io/nats.go"
@@ -34,6 +35,14 @@ func HandleRPC[Req, Res any](ctx context.Context, logger logsx.Logger, handler H
 				Data: data,
 			})
 		}
+
+		defer func() {
+			if r := recover(); r != nil {
+				respond(StatusError, ErrorResponse{
+					Message: fmt.Sprintf("Panic recover: %v", r),
+				})
+			}
+		}()
 
 		//TODO: retrieve otel tracing data from nats headers
 
