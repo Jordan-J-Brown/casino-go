@@ -1,4 +1,4 @@
-package msg
+package natsx
 
 import (
 	"context"

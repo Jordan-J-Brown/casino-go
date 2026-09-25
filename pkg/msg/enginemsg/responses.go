@@ -2,6 +2,10 @@ package enginemsg
 
 import "github.com/shopspring/decimal"
 
+type RegisterEngineResponse struct {
+	//TODO: is this needed?
+}
+
 type SetupResponse struct {
 	GameConfig []byte `json:"gameConfig"`
 	MetaData   []byte `json:"metaData"`

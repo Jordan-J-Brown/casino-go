@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/message"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/clients/engineclient"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/config"
@@ -26,8 +27,9 @@ type Application struct {
 }
 
 type Services struct {
-	GameService gameservice.Service
-	UserService userservice.Service
+	GameService    gameservice.Service
+	UserService    userservice.Service
+	EngineRegistry engineregistry.Service
 }
 
 func (app *Application) initServices(ctx context.Context) error {
@@ -40,11 +42,8 @@ func (app *Application) initServices(ctx context.Context) error {
 		return nil
 	})
 
-	engineRegistry, err := engineregistry.New(ctx, app.NatsConn, app.Logger, engineregstore.New())
-	if err != nil {
-		return errorx.New("failed to create engine registry", errorx.WithChildren(err))
-	}
-	app.RegisterShutdownFunc(engineRegistry.Shutdown)
+	engineRegistry := engineregistry.New(ctx, app.Logger, engineregstore.New())
+	app.Services.EngineRegistry = engineRegistry
 
 	gameServiceStores := game_service_store_adapter.New(pgPool, app.Logger)
 	app.Services.GameService = gameservice.New(gameservice.Config{
@@ -89,14 +88,21 @@ func Run(appConfig AppConfig) error {
 		return errorx.New("failed to initialise services", errorx.WithChildren(err))
 	}
 
-	apiShutdown := web.RunApiAsync(ctx, web.ApiConfig{
+	msgAPI, err := message.RunApiAsync(ctx, app.NatsConn, app.Logger, app.Tracer, app.Services.EngineRegistry)
+	if err != nil {
+		return errorx.New("failed to start message server", errorx.WithChildren(err))
+	}
+	app.RegisterShutdownFunc(msgAPI.Shutdown)
+
+	//TODO: match signature of message API construction
+	webApiShutdown := web.RunApiAsync(ctx, web.ApiConfig{
 		Port:        app.Config.API.Port,
 		Logger:      app.Logger,
 		Tracer:      app.Tracer,
 		UserService: app.Services.UserService,
 		GameService: app.Services.GameService,
 	})
-	app.RegisterShutdownFunc(apiShutdown)
+	app.RegisterShutdownFunc(webApiShutdown)
 
 	app.Logger.DebugContext(ctx, "Running...", "env", appConfig.Config.Env)
 

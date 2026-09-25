@@ -2,5 +2,5 @@ package mimex
 
 const (
 	ContentTypeJSON     = "application/json"
-	ContentTypeProtobuf = "application/protobuf"
+	ContentTypeProtobuf = "application/x-protobuf"
 )

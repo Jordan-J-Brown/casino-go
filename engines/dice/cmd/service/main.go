@@ -43,8 +43,8 @@ func main() {
 
 	casinoServer, err := enginemsg.StartServer(ctx, baseApp.NatsConn, baseApp.Logger, baseApp.Tracer, enginemsg.ServerConfig{
 		EngineID: "dice",
-		RegisterFunc: func(ctx context.Context) (*enginemsg.EngineRegistraton, error) {
-			return &enginemsg.EngineRegistraton{
+		RegisterFunc: func(ctx context.Context) (*enginemsg.EngineRegistration, error) {
+			return &enginemsg.EngineRegistration{
 				MinBet: 100,
 				MaxBet: 1000,
 			}, nil

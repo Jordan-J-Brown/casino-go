@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/Jordan-J-Brown/casino-go/casino/internal/domain/enginemodels"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/engineregistry"
 	"github.com/Jordan-J-Brown/casino-go/pkg/msg/enginemsg"
 )
@@ -23,19 +24,21 @@ func (s *Store) EngineIsRegistered(ctx context.Context, engineID string) (bool, 
 	return ok, nil
 }
 
-func (s *Store) GetRegistration(ctx context.Context, engineID string) (*enginemsg.EngineRegistraton, error) {
+func (s *Store) GetRegistration(ctx context.Context, engineID string) (*enginemsg.EngineRegistration, error) {
 	value, ok := s.cache.Load(engineID)
 	if !ok {
 		return nil, nil
 	}
 
-	reg := value.(enginemsg.EngineRegistraton)
+	reg := value.(enginemsg.EngineRegistration)
 
 	return &reg, nil
 }
 
-func (s *Store) PutRegistration(ctx context.Context, reg enginemsg.EngineRegistraton) error {
-	s.cache.Store(reg.EngineID, reg)
+func (s *Store) PutRegistration(ctx context.Context, reg enginemsg.EngineRegistration) error {
+	if _, exists := s.cache.LoadOrStore(reg.EngineID, reg); exists {
+		return enginemodels.ErrEngineRegistered	
+	}
 	return nil
 }
 

@@ -2,11 +2,14 @@ package enginemsg
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
-	"github.com/Jordan-J-Brown/casino-go/pkg/msg"
+	"github.com/Jordan-J-Brown/casino-go/pkg/mimex"
+	"github.com/Jordan-J-Brown/casino-go/pkg/msg/casinomsg"
+	"github.com/Jordan-J-Brown/casino-go/pkg/natsx"
 	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -18,6 +21,7 @@ import (
 // [Server.Shutdown] should be called upon graceful shutdown to drain subscriptions.
 type Server struct {
 	nc     *nats.Conn
+	client *natsx.Client
 	logger logsx.Logger
 	tracer trace.Tracer
 	cfg    ServerConfig
@@ -26,11 +30,11 @@ type Server struct {
 
 type ServerConfig struct {
 	EngineID     string
-	RegisterFunc func(ctx context.Context) (*EngineRegistraton, error)
-	SetupHandler msg.HandlerFunc[SetupRequest, SetupResponse]
-	PlayHandler  msg.HandlerFunc[PlayRequest, RoundResponse]
-	NextHandler  msg.HandlerFunc[NextRequest, RoundResponse]
-	CloseHandler msg.HandlerFunc[CloseRequest, CloseResponse]
+	RegisterFunc func(ctx context.Context) (*EngineRegistration, error)
+	SetupHandler natsx.HandlerFunc[SetupRequest, SetupResponse]
+	PlayHandler  natsx.HandlerFunc[PlayRequest, RoundResponse]
+	NextHandler  natsx.HandlerFunc[NextRequest, RoundResponse]
+	CloseHandler natsx.HandlerFunc[CloseRequest, CloseResponse]
 }
 
 func StartServer(
@@ -42,8 +46,14 @@ func StartServer(
 ) (*Server, error) {
 	const engineQ = "engines"
 
+	client := natsx.NewClient(nc).
+		SetContentType(mimex.ContentTypeJSON).
+		SetRetry(3, 100*time.Millisecond, 3*time.Second).
+		SetTimeout(3 * time.Second)
+
 	server := &Server{
 		nc:     nc,
+		client: client,
 		logger: logger,
 		tracer: tracer,
 		cfg:    cfg,
@@ -55,7 +65,7 @@ func StartServer(
 	}
 
 	setupSub, err := nc.QueueSubscribe(
-		CreateEngineSubject(cfg.EngineID, "setup"), engineQ, msg.HandleRPC(ctx, logger, cfg.SetupHandler),
+		CreateEngineSubject(cfg.EngineID, "setup"), engineQ, natsx.HandleRPC(ctx, logger, cfg.SetupHandler),
 	)
 	if err != nil {
 		return nil, err
@@ -63,7 +73,7 @@ func StartServer(
 	server.subs = append(server.subs, setupSub)
 
 	playSub, err := nc.QueueSubscribe(
-		CreateEngineSubject(cfg.EngineID, "play"), engineQ, msg.HandleRPC(ctx, logger, cfg.PlayHandler),
+		CreateEngineSubject(cfg.EngineID, "play"), engineQ, natsx.HandleRPC(ctx, logger, cfg.PlayHandler),
 	)
 	if err != nil {
 		return nil, err
@@ -71,7 +81,7 @@ func StartServer(
 	server.subs = append(server.subs, playSub)
 
 	nextSub, err := nc.QueueSubscribe(
-		CreateEngineSubject(cfg.EngineID, "next"), engineQ, msg.HandleRPC(ctx, logger, cfg.NextHandler),
+		CreateEngineSubject(cfg.EngineID, "next"), engineQ, natsx.HandleRPC(ctx, logger, cfg.NextHandler),
 	)
 	if err != nil {
 		return nil, err
@@ -79,12 +89,14 @@ func StartServer(
 	server.subs = append(server.subs, nextSub)
 
 	closeSub, err := nc.QueueSubscribe(
-		CreateEngineSubject(cfg.EngineID, "close"), engineQ, msg.HandleRPC(ctx, logger, cfg.CloseHandler),
+		CreateEngineSubject(cfg.EngineID, "close"), engineQ, natsx.HandleRPC(ctx, logger, cfg.CloseHandler),
 	)
 	if err != nil {
 		return nil, err
 	}
 	server.subs = append(server.subs, closeSub)
+
+	go server.startHealthChecks(ctx)
 
 	return &Server{
 		nc:     nc,
@@ -107,24 +119,73 @@ func (server *Server) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (server *Server) registerEngine(ctx context.Context) error {
+func (server *Server) registerEngine(ctx context.Context) (err error) {
+	defer func() {
+		if err != nil {
+			err = errors.New("failed to register engine: " + err.Error())
+		}
+	}()
+
 	registerData, err := server.cfg.RegisterFunc(ctx)
 	if err != nil {
 		return err
 	}
 	registerData.EngineID = server.cfg.EngineID
 
-	data, err := json.Marshal(registerData)
+	var response RegisterEngineResponse
+	var errResponse natsx.ErrorResponse
+	req, err := server.client.R().
+		SetBody(&registerData).
+		SetResult(&response).
+		SetError(&errResponse).
+		Exec(ctx, SubjectEnginesRegister)
 	if err != nil {
 		return err
 	}
-
-	err = server.nc.Publish(SubjectEnginesRegister, data)
-	if err != nil {
-		return err
+	if req.IsError() {
+		return &errResponse
 	}
 
 	return nil
+}
+
+func (server *Server) checkCasinoHealth(ctx context.Context) error {
+	server.logger.DebugContext(ctx, "Checking casino health...")
+	_, err := server.client.R().Exec(ctx, casinomsg.SubjectHealth)
+	if err == nil {
+		server.logger.DebugContext(ctx, "Casino is healthy")
+	}
+	return err
+}
+
+func (server *Server) startHealthChecks(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	var lostConnection bool
+	for {
+		select {
+		case <-ticker.C:
+			err := server.checkCasinoHealth(ctx)
+			if err != nil {
+				server.logger.ErrorContext(ctx, "failed to check casino health", "error", err)
+				lostConnection = true
+			}
+
+			if lostConnection {
+				server.logger.DebugContext(ctx, "Attempting to re-register engine...")
+				err = server.registerEngine(ctx)
+				if err != nil {
+					server.logger.ErrorContext(ctx, "failed to re-register engine after disconnect", err)
+					continue
+				}
+
+				lostConnection = false
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func CreateEngineSubject(engineID, action string) string {
