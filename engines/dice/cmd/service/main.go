@@ -93,12 +93,14 @@ func main() {
 			n := bigN.Int64() + 1
 
 			//TODO: add real payoutMultiplier handling
-			winnings := r.Bet * 2
 			var payoutMultiplier decimal.Decimal
+			var winnings int64
 			if n == roundConfig.Selection {
 				payoutMultiplier = decimal.NewFromInt(2)
+				winnings = r.Bet * 2
 			} else {
 				payoutMultiplier = decimal.NewFromInt(0)
+				winnings = 0
 			}
 
 			publicState, err := json.Marshal(models.RoundResult{
