@@ -7,9 +7,16 @@ import (
 
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"github.com/nats-io/nats.go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func HandleRPC[Req, Res any](ctx context.Context, logger logsx.Logger, handler HandlerFunc[Req, Res]) nats.MsgHandler {
+func HandleRPC[Req, Res any](
+	ctx context.Context,
+	logger logsx.Logger,
+	tracer trace.Tracer,
+	handler HandlerFunc[Req, Res],
+) nats.MsgHandler {
 	return func(msg *nats.Msg) {
 		respond := func(status Status, response any) {
 			var err error
@@ -23,16 +30,19 @@ func HandleRPC[Req, Res any](ctx context.Context, logger logsx.Logger, handler H
 				}
 			}()
 
+			header := nats.Header{
+				"Status": []string{status},
+			}
+			otel.GetTextMapPropagator().Inject(ctx, &NatsOtelHeaderCarrier{header})
+
 			data, err := json.Marshal(response)
 			if err != nil {
 				return
 			}
 
 			err = msg.RespondMsg(&nats.Msg{
-				Header: nats.Header{
-					"Status": []string{status},
-				},
-				Data: data,
+				Header: header,
+				Data:   data,
 			})
 		}
 
@@ -44,7 +54,9 @@ func HandleRPC[Req, Res any](ctx context.Context, logger logsx.Logger, handler H
 			}
 		}()
 
-		//TODO: retrieve otel tracing data from nats headers
+		ctx = otel.GetTextMapPropagator().Extract(ctx, &NatsOtelHeaderCarrier{msg.Header})
+		ctx, span := tracer.Start(ctx, msg.Subject)
+		defer span.End()
 
 		var request Req
 		if err := json.Unmarshal(msg.Data, &request); err != nil {

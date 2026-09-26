@@ -28,10 +28,11 @@ func main() {
 	logger := logsx.NewLogger(os.Stdout)
 
 	ctx, baseApp, err := service.NewBaseApplication(service.BaseAppConfig{
-		ServiceName: "dice-engine",
-		NatsCfg:     &cfg.Nats,
-		TracerCfg:   &cfg.Tracer,
-		Logger:      logger,
+		ServiceName:    "dice-engine",
+		ServiceVersion: cfg.ServiceVersion,
+		NatsCfg:        &cfg.Nats,
+		TracerCfg:      &cfg.Tracer,
+		Logger:         logger,
 	})
 	if err != nil {
 		panic(err)

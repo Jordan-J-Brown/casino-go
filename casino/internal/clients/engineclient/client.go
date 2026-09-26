@@ -8,6 +8,8 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/pkg/msg/enginemsg"
 	"github.com/Jordan-J-Brown/casino-go/pkg/natsx"
 	"github.com/nats-io/nats.go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 //TODO: use natsx.Client
@@ -25,7 +27,11 @@ type client struct {
 	timeout time.Duration
 }
 
-func New(nc *nats.Conn, timeout time.Duration) Client {
+func New(
+	nc *nats.Conn,
+	tracer trace.Tracer,
+	timeout time.Duration,
+) Client {
 	nclient := natsx.NewClient(nc).
 		SetContentType(mimex.ContentTypeJSON).
 		SetRetry(3, time.Millisecond*100, time.Second).
@@ -120,6 +126,9 @@ func (c *client) Close(ctx context.Context, engineID string, request enginemsg.C
 }
 
 func (c *client) getHeaders(ctx context.Context) nats.Header {
-	// TODO: propagate otel headers
-	return nats.Header{}
+	h := nats.Header{}
+
+	otel.GetTextMapPropagator().Inject(ctx, &natsx.NatsOtelHeaderCarrier{Header: h})
+
+	return h
 }

@@ -30,10 +30,11 @@ type BaseApplication struct {
 }
 
 type BaseAppConfig struct {
-	ServiceName string
-	NatsCfg     *config.Nats
-	TracerCfg   *config.Tracer
-	Logger      logsx.Logger
+	ServiceName    string
+	ServiceVersion string
+	NatsCfg        *config.Nats
+	TracerCfg      *config.Tracer
+	Logger         logsx.Logger
 }
 
 func NewBaseApplication(cfg BaseAppConfig) (ctx context.Context, base *BaseApplication, err error) {
@@ -57,7 +58,12 @@ func NewBaseApplication(cfg BaseAppConfig) (ctx context.Context, base *BaseAppli
 	}
 
 	//Setup tracing
-	otelShutDown, err := telemetry.SetupOtelSDK(ctx, cfg.TracerCfg)
+	otelShutDown, err := telemetry.SetupOtelSDK(ctx, telemetry.OtelConfig{
+		ServiceName:          cfg.ServiceName,
+		ServiceVersion:       cfg.ServiceVersion,
+		ExporterOtlpEndpoint: cfg.TracerCfg.ExporterOtlpEndpoint,
+		ExporterOtlpInsecure: cfg.TracerCfg.ExporterOtlpInsecure,
+	})
 	if err != nil {
 		return ctx, nil, err
 	}

@@ -49,7 +49,7 @@ func (app *Application) initServices(ctx context.Context) error {
 	app.Services.GameService = gameservice.New(gameservice.Config{
 		MaxPayoutMultiplier: app.Config.Games.MaxPayoutMultiplier,
 		EngineRegistry:      engineRegistry,
-		EngineClient:        engineclient.New(app.NatsConn, 3*time.Second), //TODO: add config for timeout
+		EngineClient:        engineclient.New(app.NatsConn, app.Tracer, 3*time.Second), //TODO: add config for timeout
 		BetSizes:            app.Config.Games.BetSizes,
 		Stores:              gameServiceStores,
 		Logger:              app.Logger,

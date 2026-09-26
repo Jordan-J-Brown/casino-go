@@ -8,10 +8,11 @@ import (
 )
 
 type Base struct {
-	Env         Env
-	ServiceName string
-	Nats        Nats
-	Tracer      Tracer
+	Env            Env
+	ServiceName    string
+	ServiceVersion string
+	Nats           Nats
+	Tracer         Tracer
 }
 
 func Load() (base *Base, err error) {
@@ -44,10 +45,15 @@ func Load() (base *Base, err error) {
 		return nil, errors.New("service_name is missing")
 	}
 
+	base.ServiceVersion = viper.GetString("service_version")
+	if base.ServiceVersion == "" {
+		return nil, errors.New("service_version config is missing")
+	}
+
 	if err := base.Nats.load(); err != nil {
 		return nil, err
 	}
-	if err := base.Tracer.load(); err != nil {
+	if err := base.Tracer.load(base.Env); err != nil {
 		return nil, err
 	}
 

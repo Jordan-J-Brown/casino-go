@@ -65,7 +65,7 @@ func StartServer(
 	}
 
 	setupSub, err := nc.QueueSubscribe(
-		CreateEngineSubject(cfg.EngineID, "setup"), engineQ, natsx.HandleRPC(ctx, logger, cfg.SetupHandler),
+		CreateEngineSubject(cfg.EngineID, "setup"), engineQ, natsx.HandleRPC(ctx, logger, tracer, cfg.SetupHandler),
 	)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func StartServer(
 	server.subs = append(server.subs, setupSub)
 
 	playSub, err := nc.QueueSubscribe(
-		CreateEngineSubject(cfg.EngineID, "play"), engineQ, natsx.HandleRPC(ctx, logger, cfg.PlayHandler),
+		CreateEngineSubject(cfg.EngineID, "play"), engineQ, natsx.HandleRPC(ctx, logger, tracer, cfg.PlayHandler),
 	)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func StartServer(
 	server.subs = append(server.subs, playSub)
 
 	nextSub, err := nc.QueueSubscribe(
-		CreateEngineSubject(cfg.EngineID, "next"), engineQ, natsx.HandleRPC(ctx, logger, cfg.NextHandler),
+		CreateEngineSubject(cfg.EngineID, "next"), engineQ, natsx.HandleRPC(ctx, logger, tracer, cfg.NextHandler),
 	)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func StartServer(
 	server.subs = append(server.subs, nextSub)
 
 	closeSub, err := nc.QueueSubscribe(
-		CreateEngineSubject(cfg.EngineID, "close"), engineQ, natsx.HandleRPC(ctx, logger, cfg.CloseHandler),
+		CreateEngineSubject(cfg.EngineID, "close"), engineQ, natsx.HandleRPC(ctx, logger, tracer, cfg.CloseHandler),
 	)
 	if err != nil {
 		return nil, err

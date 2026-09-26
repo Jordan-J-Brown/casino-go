@@ -1,5 +1,6 @@
 env: local
 service_name: casino
+service_version: v0.0.0
 
 api:
   port: 10000
@@ -13,3 +14,7 @@ games:
 
 nats:
   url: nats://localhost:4222
+
+otel:
+  exporter_otlp_endpoint: http://localhost:4317
+  exporter_otlp_insecure: true

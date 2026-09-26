@@ -34,7 +34,7 @@ func RunApiAsync(
 		engineRegistry: engineRegistry,
 	}
 
-	regSub, err := nc.Subscribe(enginemsg.SubjectEnginesRegister, natsx.HandleRPC(ctx, logger, api.handleEngineRegistration))
+	regSub, err := nc.Subscribe(enginemsg.SubjectEnginesRegister, natsx.HandleRPC(ctx, logger, tracer, api.handleEngineRegistration))
 	if err != nil {
 		return nil, err
 	}

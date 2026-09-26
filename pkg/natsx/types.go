@@ -2,10 +2,6 @@ package natsx
 
 import "context"
 
-const (
-	HeaderStatus = "Status"
-)
-
 type Status = string
 
 const (

@@ -17,11 +17,12 @@ func main() {
 	logger := logsx.NewLogger(os.Stdout)
 
 	err = app.Run(app.AppConfig{
-		ServiceName: cfg.ServiceName,
-		NatsCfg:     &cfg.Nats,
-		TracerCfg:   &cfg.Tracer,
-		Logger:      logger,
-		Config:      cfg,
+		ServiceName:    cfg.ServiceName,
+		ServiceVersion: cfg.ServiceVersion,
+		NatsCfg:        &cfg.Nats,
+		TracerCfg:      &cfg.Tracer,
+		Logger:         logger,
+		Config:         cfg,
 	})
 	if err != nil {
 		panic(err)
