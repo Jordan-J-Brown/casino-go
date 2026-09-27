@@ -1,4 +1,4 @@
-module github.com/Jordan-J-Brown/casino-go/engines/dice
+module github.com/Jordan-J-Brown/casino-go/engines/mines
 
 go 1.27.1
 

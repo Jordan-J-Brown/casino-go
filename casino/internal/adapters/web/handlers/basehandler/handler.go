@@ -37,7 +37,7 @@ func (base *Base) ReplyInternalError(w http.ResponseWriter, msg ...string) {
 	http.Error(w, message, http.StatusInternalServerError)
 }
 
-func (base *Base) ReplyErrorJSON(ctx context.Context, w http.ResponseWriter, errCode string, httpCode int, msg ...string) {
+func (base *Base) ReplyErrorJSON(ctx context.Context, w http.ResponseWriter, errType string, httpCode int, msg ...string) {
 	var message string
 	if len(msg) == 1 {
 		message = msg[0]
@@ -48,7 +48,7 @@ func (base *Base) ReplyErrorJSON(ctx context.Context, w http.ResponseWriter, err
 	w.WriteHeader(httpCode)
 
 	err := json.NewEncoder(w).Encode(responses.Error{
-		Code:    errCode,
+		Type:    errType,
 		Message: message,
 	})
 	if err != nil {

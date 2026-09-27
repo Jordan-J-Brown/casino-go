@@ -11,23 +11,31 @@ var (
 	OutputStack = false
 )
 
-type Type uint16
+type Code uint16
 
 const (
-	Unknown Type = iota
-	NotFound
-	UserError
-	InternalError
+	Unknown     Code = iota
+	ClientError Code = 400
+	NotFound    Code = 404
+	ServerError Code = 500
 )
 
-func (t Type) String() string {
+func (t Code) IsServerError() bool {
+	return t == Unknown || t >= ServerError && t < 600
+}
+
+func (t Code) IsClientError() bool {
+	return t >= ClientError && t < ServerError
+}
+
+func (t Code) String() string {
 	switch t {
+	case ClientError:
+		return "Client_Error"
 	case NotFound:
 		return "Not_Found"
-	case UserError:
-		return "User_Error"
-	case InternalError:
-		return "Internal_Error"
+	case ServerError:
+		return "Server_Error"
 	default:
 		return "Unknown"
 	}
@@ -35,7 +43,8 @@ func (t Type) String() string {
 
 type Error struct {
 	outputStack bool
-	errType     Type
+	code        Code
+	errType     string
 	msg         string
 	stack       string
 	children    []error
@@ -43,8 +52,8 @@ type Error struct {
 
 func New(msg string, opts ...Option) *Error {
 	err := &Error{
-		errType: Unknown,
-		msg:     msg,
+		code: Unknown,
+		msg:  msg,
 	}
 
 	for _, opt := range opts {
@@ -70,6 +79,15 @@ func New(msg string, opts ...Option) *Error {
 	return err
 }
 
+func NewFromError(err error, opts ...Option) *Error {
+	return New(err.Error(), opts...)
+}
+
+func NewFromType(errType string, opts ...Option) *Error {
+	opts = append(opts, WithType(errType))
+	return New("", opts...)
+}
+
 // New error with formatting. Args should be passed first, then options.
 func Newf(msg string, argsOrOpts ...any) *Error {
 	opts := make([]Option, 0, len(argsOrOpts))
@@ -91,11 +109,27 @@ func Newf(msg string, argsOrOpts ...any) *Error {
 	return New(msg, opts...)
 }
 
+func (e *Error) Code() Code {
+	return e.code
+}
+
+func (e *Error) Type() string {
+	return e.errType
+}
+
+func (e *Error) Message() string {
+	return e.msg
+}
+
 func (e *Error) Error() string {
 	s := &strings.Builder{}
 
 	s.WriteString("Error(")
-	s.WriteString(e.errType.String())
+	s.WriteString(e.code.String())
+	if e.errType != "" {
+		s.WriteByte(':')
+		s.WriteString(e.errType)
+	}
 	s.WriteString("): ")
 	s.WriteString(e.msg)
 	s.WriteString("\n\n")

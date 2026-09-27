@@ -2,9 +2,15 @@ package errorx
 
 type Option func(*Error)
 
-func WithType(errType Type) Option {
+func WithCode(code Code) Option {
 	return func(err *Error) {
-		err.errType = errType
+		err.code = code
+	}
+}
+
+func WithType(t string) Option {
+	return func(err *Error) {
+		err.errType = t
 	}
 }
 

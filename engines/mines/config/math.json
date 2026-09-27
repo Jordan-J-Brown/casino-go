@@ -1,0 +1,9 @@
+{
+  "min_bet": 10,
+  "max_bet": 500,
+  "grid_size": 25,
+  "house_edge": 2,
+  "meta_data": {
+    "version": "v0.0.0"
+  }
+}

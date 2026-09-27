@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
+	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel"
@@ -49,7 +51,8 @@ func HandleRPC[Req, Res any](
 		defer func() {
 			if r := recover(); r != nil {
 				respond(StatusError, ErrorResponse{
-					Message: fmt.Sprintf("Panic recover: %v", r),
+					StatusCode: http.StatusInternalServerError,
+					Message:    fmt.Sprintf("Panic recover: %v", r),
 				})
 			}
 		}()
@@ -61,7 +64,8 @@ func HandleRPC[Req, Res any](
 		var request Req
 		if err := json.Unmarshal(msg.Data, &request); err != nil {
 			respond(StatusError, ErrorResponse{
-				Message: "failed to unmarshal message data: " + err.Error(),
+				StatusCode: http.StatusInternalServerError,
+				Message:    "failed to unmarshal message data: " + err.Error(),
 			})
 			return
 		}
@@ -69,11 +73,28 @@ func HandleRPC[Req, Res any](
 		response, err := handler(ctx, request)
 		if err != nil {
 			respond(StatusError, ErrorResponse{
-				Message: "error from message handler: " + err.Error(),
+				StatusCode: StatusCodeFromError(err),
+				Type:       err.Type(),
+				Message:    "error from message handler: " + err.Error(),
 			})
 			return
 		}
 
 		respond(StatusSuccess, response)
+	}
+}
+
+func StatusCodeFromError(err *errorx.Error) int {
+	switch err.Code() {
+	case errorx.Unknown:
+		return http.StatusInternalServerError
+	case errorx.ClientError:
+		return http.StatusBadRequest
+	case errorx.NotFound:
+		return http.StatusNotFound
+	case errorx.ServerError:
+		return http.StatusInternalServerError
+	default:
+		panic("unexpected errorx.Code")
 	}
 }

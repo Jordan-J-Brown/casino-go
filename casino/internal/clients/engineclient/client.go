@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
+	"github.com/Jordan-J-Brown/casino-go/pkg/httpx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/mimex"
 	"github.com/Jordan-J-Brown/casino-go/pkg/msg/enginemsg"
 	"github.com/Jordan-J-Brown/casino-go/pkg/natsx"
@@ -12,13 +14,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-//TODO: use natsx.Client
-
 type Client interface {
-	Setup(ctx context.Context, engineID string, request enginemsg.SetupRequest) (*enginemsg.SetupResponse, error)
-	Play(ctx context.Context, engineID string, request enginemsg.PlayRequest) (*enginemsg.RoundResponse, error)
-	Next(ctx context.Context, engineID string, request enginemsg.NextRequest) (*enginemsg.RoundResponse, error)
-	Close(ctx context.Context, engineID string, request enginemsg.CloseRequest) (*enginemsg.CloseResponse, error)
+	Setup(ctx context.Context, engineID string, request enginemsg.SetupRequest) (*enginemsg.SetupResponse, *errorx.Error)
+	Play(ctx context.Context, engineID string, request enginemsg.PlayRequest) (*enginemsg.RoundResponse, *errorx.Error)
+	Next(ctx context.Context, engineID string, request enginemsg.NextRequest) (*enginemsg.RoundResponse, *errorx.Error)
+	Close(ctx context.Context, engineID string, request enginemsg.CloseRequest) (*enginemsg.CloseResponse, *errorx.Error)
 }
 
 type client struct {
@@ -45,7 +45,7 @@ func New(
 	return client
 }
 
-func (c *client) Setup(ctx context.Context, engineID string, request enginemsg.SetupRequest) (*enginemsg.SetupResponse, error) {
+func (c *client) Setup(ctx context.Context, engineID string, request enginemsg.SetupRequest) (*enginemsg.SetupResponse, *errorx.Error) {
 	var response enginemsg.SetupResponse
 	var errResponse natsx.ErrorResponse
 
@@ -56,16 +56,16 @@ func (c *client) Setup(ctx context.Context, engineID string, request enginemsg.S
 		SetError(&errResponse).
 		Exec(ctx, enginemsg.CreateEngineSubject(engineID, "setup"))
 	if err != nil {
-		return nil, err
+		return nil, errorx.NewFromError(err)
 	}
 	if req.IsError() {
-		return nil, &errResponse
+		return nil, convertErrorResponse(&errResponse)
 	}
 
-	return &response, err
+	return &response, nil
 }
 
-func (c *client) Play(ctx context.Context, engineID string, request enginemsg.PlayRequest) (*enginemsg.RoundResponse, error) {
+func (c *client) Play(ctx context.Context, engineID string, request enginemsg.PlayRequest) (*enginemsg.RoundResponse, *errorx.Error) {
 	var response enginemsg.RoundResponse
 	var errResponse natsx.ErrorResponse
 
@@ -76,16 +76,16 @@ func (c *client) Play(ctx context.Context, engineID string, request enginemsg.Pl
 		SetError(&errResponse).
 		Exec(ctx, enginemsg.CreateEngineSubject(engineID, "play"))
 	if err != nil {
-		return nil, err
+		return nil, errorx.NewFromError(err)
 	}
 	if req.IsError() {
-		return nil, &errResponse
+		return nil, convertErrorResponse(&errResponse)
 	}
 
-	return &response, err
+	return &response, nil
 }
 
-func (c *client) Next(ctx context.Context, engineID string, request enginemsg.NextRequest) (*enginemsg.RoundResponse, error) {
+func (c *client) Next(ctx context.Context, engineID string, request enginemsg.NextRequest) (*enginemsg.RoundResponse, *errorx.Error) {
 	var response enginemsg.RoundResponse
 	var errResponse natsx.ErrorResponse
 
@@ -96,16 +96,16 @@ func (c *client) Next(ctx context.Context, engineID string, request enginemsg.Ne
 		SetError(&errResponse).
 		Exec(ctx, enginemsg.CreateEngineSubject(engineID, "next"))
 	if err != nil {
-		return nil, err
+		return nil, errorx.NewFromError(err)
 	}
 	if req.IsError() {
-		return nil, &errResponse
+		return nil, convertErrorResponse(&errResponse)
 	}
 
-	return &response, err
+	return &response, nil
 }
 
-func (c *client) Close(ctx context.Context, engineID string, request enginemsg.CloseRequest) (*enginemsg.CloseResponse, error) {
+func (c *client) Close(ctx context.Context, engineID string, request enginemsg.CloseRequest) (*enginemsg.CloseResponse, *errorx.Error) {
 	var response enginemsg.CloseResponse
 	var errResponse natsx.ErrorResponse
 
@@ -116,13 +116,13 @@ func (c *client) Close(ctx context.Context, engineID string, request enginemsg.C
 		SetError(&errResponse).
 		Exec(ctx, enginemsg.CreateEngineSubject(engineID, "close"))
 	if err != nil {
-		return nil, err
+		return nil, errorx.NewFromError(err)
 	}
 	if req.IsError() {
-		return nil, &errResponse
+		return nil, convertErrorResponse(&errResponse)
 	}
 
-	return &response, err
+	return &response, nil
 }
 
 func (c *client) getHeaders(ctx context.Context) nats.Header {
@@ -131,4 +131,15 @@ func (c *client) getHeaders(ctx context.Context) nats.Header {
 	otel.GetTextMapPropagator().Inject(ctx, &natsx.NatsOtelHeaderCarrier{Header: h})
 
 	return h
+}
+
+func convertErrorResponse(err *natsx.ErrorResponse) *errorx.Error {
+	var code errorx.Code
+	if httpx.IsClientError(err.StatusCode) {
+		code = errorx.ClientError
+	} else {
+		code = errorx.ServerError
+	}
+
+	return errorx.New(err.Message, errorx.WithCode(code), errorx.WithType(err.Type))
 }

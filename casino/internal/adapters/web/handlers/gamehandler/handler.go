@@ -5,11 +5,11 @@ import (
 	"net/http"
 
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web/handlers/basehandler"
-	"github.com/Jordan-J-Brown/casino-go/casino/internal/domain/gamemodels"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/domain/usermodels"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/gameservice"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/responses"
+	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -44,13 +44,13 @@ func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {
 
 	user := ctx.Value(usermodels.CtxKeyUser).(*usermodels.User)
 
-	result, err := h.gameService.Setup(ctx, gameservice.SetupRequest{
+	result, setupErr := h.gameService.Setup(ctx, gameservice.SetupRequest{
 		EngineID: request.GameID,
 		User:     user,
 	})
-	if err != nil {
-		h.Logger.ErrorContext(ctx, "failed to retrieve setup result", "error", err)
-		h.handleError(ctx, w, err)
+	if setupErr != nil {
+		h.Logger.ErrorContext(ctx, "failed to retrieve setup result", "error", setupErr)
+		h.handleError(ctx, w, setupErr)
 		return
 	}
 
@@ -75,15 +75,15 @@ func (h *Handler) Play(w http.ResponseWriter, r *http.Request) {
 
 	user := ctx.Value(usermodels.CtxKeyUser).(*usermodels.User)
 
-	result, err := h.gameService.Play(ctx, gameservice.PlayRequest{
+	result, playErr := h.gameService.Play(ctx, gameservice.PlayRequest{
 		EngineID: request.GameID,
 		Bet:      request.Bet,
 		User:     user,
 		MetaData: request.GameData,
 	})
-	if err != nil {
-		h.Logger.ErrorContext(ctx, "failed to retrieve play result from game service", "error", err)
-		h.handleError(ctx, w, err)
+	if playErr != nil {
+		h.Logger.ErrorContext(ctx, "failed to retrieve play result from game service", "error", playErr)
+		h.handleError(ctx, w, playErr)
 		return
 	}
 
@@ -95,8 +95,34 @@ func (h *Handler) Play(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Next(w http.ResponseWriter, r *http.Request) {
-	//TODO: implement
-	panic("not implemented")
+	ctx, span := h.Tracer.Start(r.Context(), "casino-game-next")
+	defer span.End()
+
+	request, err := h.DecodeJSON[requests.Next](r.Body)
+	if err != nil {
+		h.Logger.ErrorContext(ctx, "failed to decode next request", "error", err)
+		h.handleError(ctx, w, err)
+		return
+	}
+
+	user := ctx.Value(usermodels.CtxKeyUser).(*usermodels.User)
+
+	result, nextErr := h.gameService.Next(ctx, gameservice.NextRequest{
+		EngineID: request.GameID,
+		User:     user,
+		MetaData: request.GameData,
+	})
+	if nextErr != nil {
+		h.Logger.ErrorContext(ctx, "failed to retrieve next result from game service", "error", nextErr)
+		h.handleError(ctx, w, nextErr)
+		return
+	}
+
+	h.ReplyJSON(w, r, responses.Round{
+		Balance:          result.Balance,
+		PayoutMultiplier: result.PayoutMutliplier,
+		RoundData:        result.PublicState,
+	})
 }
 
 func (h *Handler) Close(w http.ResponseWriter, r *http.Request) {
@@ -112,13 +138,13 @@ func (h *Handler) Close(w http.ResponseWriter, r *http.Request) {
 
 	user := ctx.Value(usermodels.CtxKeyUser).(*usermodels.User)
 
-	result, err := h.gameService.Close(ctx, gameservice.CloseRequest{
+	result, closeErr := h.gameService.Close(ctx, gameservice.CloseRequest{
 		EngineID: request.GameID,
 		User:     user,
 	})
-	if err != nil {
-		h.Logger.ErrorContext(ctx, "failed to retrieve close result", "error", err)
-		h.handleError(ctx, w, err)
+	if closeErr != nil {
+		h.Logger.ErrorContext(ctx, "failed to retrieve close result", "error", closeErr)
+		h.handleError(ctx, w, closeErr)
 		return
 	}
 
@@ -128,8 +154,21 @@ func (h *Handler) Close(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleError(ctx context.Context, w http.ResponseWriter, err error) {
-	if gameError, ok := err.(*gamemodels.Error); ok {
-		h.ReplyErrorJSON(ctx, w, string(gameError.Code), http.StatusBadRequest)
+	if errX, ok := err.(*errorx.Error); ok {
+		var statusCode int
+		if errX.Code().IsClientError() {
+			statusCode = http.StatusBadRequest
+		} else {
+			statusCode = http.StatusInternalServerError
+		}
+
+		errType := errX.Type()
+		if errType == "" {
+			errType = "UNKNOWN"
+		}
+
+		h.ReplyErrorJSON(ctx, w, errType, statusCode)
+
 		return
 	}
 

@@ -64,7 +64,7 @@ func (store *Store) LoadGame(ctx context.Context, tx pgx.Tx, userID string, engi
 		)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, &gamemodels.Error{Code: gamemodels.ErrGameNotFound}
+			return nil, gamemodels.ErrGameNotFound
 		}
 		return nil, err
 	}

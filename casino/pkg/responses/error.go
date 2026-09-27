@@ -1,6 +1,6 @@
 package responses
 
 type Error struct {
-	Code    string `json:"code"`
+	Type    string `json:"type"`
 	Message string `json:"message,omitzero"`
 }

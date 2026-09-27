@@ -1,6 +1,10 @@
 package natsx
 
-import "context"
+import (
+	"context"
+
+	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
+)
 
 type Status = string
 
@@ -10,11 +14,13 @@ const (
 )
 
 type ErrorResponse struct {
-	Message string `json:"message"`
+	StatusCode int    `json:"status_code"`
+	Type       string `json:"type"`
+	Message    string `json:"message,omitempty"`
 }
 
 func (err *ErrorResponse) Error() string {
 	return err.Message
 }
 
-type HandlerFunc[Req, Res any] func(ctx context.Context, r Req) (*Res, error)
+type HandlerFunc[Req, Res any] func(ctx context.Context, r Req) (*Res, *errorx.Error)

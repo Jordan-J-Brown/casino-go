@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/engineregistry"
+	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/msg/casinomsg"
 	"github.com/Jordan-J-Brown/casino-go/pkg/msg/enginemsg"
@@ -64,10 +65,10 @@ func (api *API) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (api *API) handleEngineRegistration(ctx context.Context, r enginemsg.EngineRegistration) (*enginemsg.RegisterEngineResponse, error) {
+func (api *API) handleEngineRegistration(ctx context.Context, r enginemsg.EngineRegistration) (*enginemsg.RegisterEngineResponse, *errorx.Error) {
 	err := api.engineRegistry.RegisterEngine(ctx, r)
 	if err != nil {
-		return nil, err
+		return nil, errorx.New("failed to register engine", errorx.WithChildren(err))
 	}
 
 	return &enginemsg.RegisterEngineResponse{}, nil

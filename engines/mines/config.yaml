@@ -1,6 +1,8 @@
 env: local
-service_name: dice-engine
+service_name: mines-engine
 service_version: v0.0.0
+engine_id: mines
+engine_version: v0.0.0
 
 nats:
   url: nats://localhost:4222

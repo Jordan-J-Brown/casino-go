@@ -18,10 +18,10 @@ import (
 )
 
 type Service interface {
-	Setup(ctx context.Context, request SetupRequest) (*SetupResult, error)
-	Play(ctx context.Context, request PlayRequest) (*RoundResult, error)
-	Next(ctx context.Context, request NextRequest) (*RoundResult, error)
-	Close(ctx context.Context, request CloseRequest) (*CloseResult, error)
+	Setup(ctx context.Context, request SetupRequest) (*SetupResult, *errorx.Error)
+	Play(ctx context.Context, request PlayRequest) (*RoundResult, *errorx.Error)
+	Next(ctx context.Context, request NextRequest) (*RoundResult, *errorx.Error)
+	Close(ctx context.Context, request CloseRequest) (*CloseResult, *errorx.Error)
 }
 
 type service struct {
@@ -42,6 +42,14 @@ func New(cfg Config) Service {
 	return &service{
 		cfg: cfg,
 	}
+}
+
+func (service *service) capPayoutMultiplier(m decimal.Decimal) (mult decimal.Decimal, capped bool) {
+	maxMult := decimal.NewFromInt(service.cfg.MaxPayoutMultiplier)
+	if m.GreaterThanOrEqual(maxMult) {
+		return maxMult, true
+	}
+	return m, false
 }
 
 func (service *service) transferFunds(ctx context.Context, store WalletStoreAdapter, args walletmodels.TransferArgs) (srcBalance, dstBalance int64, err error) {
@@ -81,31 +89,39 @@ func (service *service) limitBets(minBet, maxBet int64, allBets []int64) ([]int6
 	return nil, errors.New("failed to limit bets")
 }
 
-func (service *service) getBetsForEngine(ctx context.Context, engineID string) ([]int64, error) {
+func (service *service) getEngineReg(ctx context.Context, engineID string) (*enginemsg.EngineRegistration, *errorx.Error) {
 	engineReg, err := service.cfg.EngineRegistry.GetEngineRegistration(ctx, engineID)
 	if err != nil {
-		return nil, err
+		return nil, errorx.NewFromError(err)
 	}
 	if engineReg == nil {
-		return nil, errorx.Newf("engine is not registered: %s", engineID)
+		return nil, errorx.NewFromType("ERR_ENGINE_NOT_FOUND", errorx.WithCode(errorx.ClientError))
+	}
+	return engineReg, nil
+}
+
+func (service *service) getBetsForEngine(ctx context.Context, engineID string) ([]int64, *errorx.Error) {
+	engineReg, regErr := service.getEngineReg(ctx, engineID)
+	if regErr != nil {
+		return nil, regErr
 	}
 
-	bets, err := service.limitBets(engineReg.MinBet, engineReg.MaxBet, service.cfg.BetSizes)
-	if err != nil {
-		return nil, err
+	bets, limitErr := service.limitBets(engineReg.MinBet, engineReg.MaxBet, service.cfg.BetSizes)
+	if limitErr != nil {
+		return nil, errorx.NewFromError(limitErr)
 	}
 
 	return bets, nil
 }
 
-func (service *service) Setup(ctx context.Context, request SetupRequest) (*SetupResult, error) {
+func (service *service) Setup(ctx context.Context, request SetupRequest) (*SetupResult, *errorx.Error) {
 	bets, err := service.getBetsForEngine(ctx, request.EngineID)
 	if err != nil {
 		return nil, err
 	}
 
 	var game *gamemodels.Game
-	err = service.cfg.Stores.Transact(ctx, func(ctx context.Context, stores Adapters) error {
+	transactErr := service.cfg.Stores.Transact(ctx, func(ctx context.Context, stores Adapters) error {
 		gameExists, err := stores.GameStore.IsActiveGamePresent(ctx, request.User.ID, request.EngineID)
 		if err != nil {
 			return err
@@ -117,15 +133,15 @@ func (service *service) Setup(ctx context.Context, request SetupRequest) (*Setup
 		game, err = stores.GameStore.LoadGame(ctx, request.User.ID, request.EngineID)
 		return err
 	})
-	if err != nil {
+	if transactErr != nil {
 		return nil, errorx.New("failed to check for active game from setup", errorx.WithChildren(err))
 	}
 
-	engineResponse, err := service.cfg.EngineClient.Setup(ctx, request.EngineID, enginemsg.SetupRequest{
+	engineResponse, setupErr := service.cfg.EngineClient.Setup(ctx, request.EngineID, enginemsg.SetupRequest{
 		MetaData: request.MetaData,
 	})
-	if err != nil {
-		return nil, err
+	if setupErr != nil {
+		return nil, setupErr
 	}
 
 	result := &SetupResult{
@@ -141,25 +157,25 @@ func (service *service) Setup(ctx context.Context, request SetupRequest) (*Setup
 	return result, nil
 }
 
-func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundResult, error) {
+func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundResult, *errorx.Error) {
 	bets, err := service.getBetsForEngine(ctx, request.EngineID)
 	if err != nil {
 		return nil, err
 	}
 
 	if !slices.Contains(bets, request.Bet) {
-		return nil, &gamemodels.Error{Code: gamemodels.ErrInvalidBet}
+		return nil, errorx.NewFromError(gamemodels.ErrInvalidBet)
 	}
 
 	result := new(RoundResult)
 
-	err = service.cfg.Stores.Transact(ctx, func(ctx context.Context, adapters Adapters) error {
+	transactErr := service.cfg.Stores.Transact(ctx, func(ctx context.Context, adapters Adapters) error {
 		gameExists, err := adapters.GameStore.IsActiveGamePresent(ctx, request.User.ID, request.EngineID)
 		if err != nil {
 			return errorx.New("failed to check if game exists", errorx.WithChildren(err))
 		}
 		if gameExists {
-			return &gamemodels.Error{Code: gamemodels.ErrGameInProgress}
+			return errorx.NewFromType(string(gamemodels.ErrGameInProgress), errorx.WithCode(errorx.ClientError))
 		}
 
 		game := &gamemodels.Game{
@@ -178,7 +194,7 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 		})
 		if err != nil {
 			if err == walletmodels.ErrInsufficientFunds {
-				return &gamemodels.Error{Code: gamemodels.ErrInsufficientFunds}
+				return errorx.NewFromType(string(gamemodels.ErrInsufficientFunds), errorx.WithCode(errorx.ClientError))
 			}
 			return errorx.New("failed to transfer bet", errorx.WithChildren(err))
 		}
@@ -187,12 +203,12 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 			return err
 		}
 
-		engineResponse, err := service.cfg.EngineClient.Play(ctx, request.EngineID, enginemsg.PlayRequest{
+		engineResponse, playErr := service.cfg.EngineClient.Play(ctx, request.EngineID, enginemsg.PlayRequest{
 			Bet:      request.Bet,
 			MetaData: request.MetaData,
 		})
-		if err != nil {
-			return errorx.New("failed to get engine response", errorx.WithChildren(err))
+		if playErr != nil {
+			return playErr
 		}
 		game.PrivateState = engineResponse.PrivateState
 		game.PublicState = engineResponse.PublicState
@@ -204,49 +220,108 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 		}
 
 		result.Balance = srcBalance
-		result.PayoutMutliplier = engineResponse.PayoutMultiplier.StringFixed(2)
+		result.PayoutMutliplier = engineResponse.PayoutMultiplier.String()
 		result.PublicState = engineResponse.PublicState
 
 		return ctx.Err()
 	})
-	if err != nil {
-		return nil, err
+	if transactErr != nil {
+		if errX, ok := transactErr.(*errorx.Error); ok {
+			return nil, errX
+		}
+		return nil, errorx.NewFromError(err)
 	}
 
 	return result, nil
 }
 
-func (service *service) Next(ctx context.Context, request NextRequest) (*RoundResult, error) {
-	panic("not implemented")
-}
+func (service *service) Next(ctx context.Context, request NextRequest) (*RoundResult, *errorx.Error) {
+	_, err := service.getEngineReg(ctx, request.EngineID)
+	if err != nil {
+		return nil, err
+	}
 
-func (service *service) Close(ctx context.Context, request CloseRequest) (result *CloseResult, err error) {
-	err = service.cfg.Stores.Transact(ctx, func(ctx context.Context, stores Adapters) error {
+	var result *RoundResult
+	transactErr := service.cfg.Stores.Transact(ctx, func(ctx context.Context, stores Adapters) error {
 		game, err := stores.GameStore.LoadGame(ctx, request.User.ID, request.EngineID)
-		if err != nil {
-			if gamemodels.IsGameError(err) {
-				return err
-			}
-			return errorx.New("failed to load game to close", errorx.WithChildren(err))
+		if err != nil && err != gamemodels.ErrGameNotFound {
+			return err
 		}
 		if game == nil {
-			return gamemodels.NewError(gamemodels.ErrGameNotFound)
+			return errorx.NewFromType(string(gamemodels.ErrGameNotFound), errorx.WithCode(errorx.ClientError))
 		}
 
-		closeResponse, err := service.cfg.EngineClient.Close(ctx, game.EngineID, enginemsg.CloseRequest{
+		wallet, err := stores.WalletStore.GetWallet(ctx, request.User.WalletID)
+		if err != nil {
+			return err
+		}
+
+		if _, capped := service.capPayoutMultiplier(game.PayoutMultiplier); capped {
+			return errorx.NewFromType(string(gamemodels.ErrNextUnavailable), errorx.WithCode(errorx.ClientError))
+		}
+
+		response, nextErr := service.cfg.EngineClient.Next(ctx, request.EngineID, enginemsg.NextRequest{
+			State:    game.PrivateState,
+			MetaData: request.MetaData,
+		})
+		if nextErr != nil {
+			return nextErr
+		}
+		game.PrivateState = response.PrivateState
+		game.PublicState = response.PublicState
+		payoutMultiplier, _ := service.capPayoutMultiplier(response.PayoutMultiplier)
+		game.PayoutMultiplier = payoutMultiplier
+
+		err = stores.GameStore.SaveGame(ctx, game)
+		if err != nil {
+			return err
+		}
+
+		result = &RoundResult{
+			Balance:          wallet.BalanceMinor,
+			PayoutMutliplier: game.PayoutMultiplier.String(),
+			PublicState:      game.PublicState,
+		}
+
+		return nil
+	})
+	if transactErr != nil {
+		if errX, ok := transactErr.(*errorx.Error); ok {
+			return nil, errX
+		}
+		return nil, errorx.NewFromError(transactErr)
+	}
+
+	return result, nil
+}
+
+func (service *service) Close(ctx context.Context, request CloseRequest) (*CloseResult, *errorx.Error) {
+	var result *CloseResult
+	transactErr := service.cfg.Stores.Transact(ctx, func(ctx context.Context, stores Adapters) error {
+		game, err := stores.GameStore.LoadGame(ctx, request.User.ID, request.EngineID)
+		if err != nil && err != gamemodels.ErrGameNotFound {
+			return errorx.NewFromError(err)
+		}
+		if game == nil {
+			return errorx.NewFromType(string(gamemodels.ErrGameNotFound), errorx.WithCode(errorx.ClientError))
+		}
+
+		closeResponse, closeErr := service.cfg.EngineClient.Close(ctx, game.EngineID, enginemsg.CloseRequest{
 			State: game.PrivateState,
 		})
-		if err != nil {
-			return errorx.New("failed to get close response from engine", errorx.WithChildren(err))
+		if closeErr != nil {
+			return closeErr
 		}
 		if !closeResponse.CanClose {
-			return gamemodels.NewError(gamemodels.ErrCannotCloseGame)
+			return errorx.NewFromType(string(gamemodels.ErrCannotCloseGame), errorx.WithCode(errorx.ClientError))
 		}
 
-		maxWinMultiplier := decimal.NewFromInt(service.cfg.MaxPayoutMultiplier)
-		payoutMultiplier := game.PayoutMultiplier
-		if payoutMultiplier.GreaterThan(maxWinMultiplier) {
-			payoutMultiplier = maxWinMultiplier.Copy()
+		payoutMultiplier, capped := service.capPayoutMultiplier(game.PayoutMultiplier)
+		if capped {
+			service.cfg.Logger.InfoContext(ctx, "game capped",
+				"game_id", game.GameID,
+				"multiplier", game.PayoutMultiplier.String(),
+			)
 		}
 
 		var balance int64
@@ -283,5 +358,12 @@ func (service *service) Close(ctx context.Context, request CloseRequest) (result
 
 		return nil
 	})
-	return
+	if transactErr != nil {
+		if errX, ok := transactErr.(*errorx.Error); ok {
+			return nil, errX
+		}
+		return nil, errorx.NewFromError(transactErr)
+	}
+
+	return result, nil
 }
