@@ -10,6 +10,7 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/pkg/msg/enginemsg"
 	"github.com/Jordan-J-Brown/casino-go/pkg/natsx"
 	"github.com/nats-io/nats.go"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -66,10 +67,16 @@ func (api *API) Shutdown(ctx context.Context) error {
 }
 
 func (api *API) handleEngineRegistration(ctx context.Context, r enginemsg.EngineRegistration) (*enginemsg.RegisterEngineResponse, *errorx.Error) {
+
 	err := api.engineRegistry.RegisterEngine(ctx, r)
 	if err != nil {
 		return nil, errorx.New("failed to register engine", errorx.WithChildren(err))
 	}
+
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("engine-registered", trace.WithAttributes(
+		attribute.String("engine_id", r.EngineID),
+	))
 
 	return &enginemsg.RegisterEngineResponse{}, nil
 }
