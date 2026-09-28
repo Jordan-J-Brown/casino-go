@@ -33,6 +33,8 @@ func New(
 	}
 }
 
+//TODO: add real auth handling
+
 // Demo auth handling, should just end up creating a new user+wallet with the balance and returning a session ID that links to the new user.
 func (h *Handler) Authenticate(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.Tracer.Start(r.Context(), "casino-auth")
