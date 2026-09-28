@@ -18,3 +18,7 @@ nats:
 otel:
   exporter_otlp_endpoint: http://localhost:4317
   exporter_otlp_insecure: true
+
+logging:
+  type:  text   #text|json
+  level: debug  #debug|info|warn|error
