@@ -62,6 +62,8 @@ func Start(cfg *config.Config, logger logsx.Logger) error {
 	}
 	engine.msgServer = msgServer
 
+	logger.InfoContext(ctx, "Engine running...")
+
 	engine.WaitForShutdown(ctx)
 
 	return nil
