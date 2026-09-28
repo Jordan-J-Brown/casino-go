@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"time"
 
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/message"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web"
@@ -49,7 +48,7 @@ func (app *Application) initServices(ctx context.Context) error {
 	app.Services.GameService = gameservice.New(gameservice.Config{
 		MaxPayoutMultiplier: app.Config.Games.MaxPayoutMultiplier,
 		EngineRegistry:      engineRegistry,
-		EngineClient:        engineclient.New(app.NatsConn, app.Tracer, 3*time.Second), //TODO: add config for timeout
+		EngineClient:        engineclient.New(app.NatsConn, app.Tracer, app.Config.Engines.ClientTimeoutSeconds),
 		BetSizes:            app.Config.Games.BetSizes,
 		Stores:              gameServiceStores,
 		Logger:              app.Logger,
@@ -57,7 +56,7 @@ func (app *Application) initServices(ctx context.Context) error {
 	})
 
 	app.Services.UserService = userservice.New(userservice.Config{
-		SessionTTL: 0, //TODO: add config
+		SessionTTL: app.Config.Auth.SessionTTL,
 		Store:      userwalletstorepg.New(pgPool, app.Logger),
 	})
 
@@ -94,7 +93,6 @@ func Run(appConfig AppConfig) error {
 	}
 	app.RegisterShutdownFunc(msgAPI.Shutdown)
 
-	//TODO: match signature of message API construction
 	webApiShutdown := web.RunApiAsync(ctx, web.ApiConfig{
 		Port:        app.Config.API.Port,
 		Logger:      app.Logger,

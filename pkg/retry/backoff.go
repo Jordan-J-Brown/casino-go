@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-//TODO: add tests
-
 var (
 	ErrDelayZero       = errors.New("delay cannot be zero")
 	ErrMaxDelayZero    = errors.New("maxDelay cannot be zero")
@@ -36,10 +34,7 @@ func Backoff(
 
 	for i := 1; i <= maxRetries; i++ {
 		if i > 1 {
-			delay = time.Duration(math.Pow(float64(delay), 2))
-			if delay > maxDelay {
-				delay = maxDelay
-			}
+			delay = min(time.Duration(math.Pow(float64(delay), 2)), maxDelay)
 		}
 
 		time.Sleep(delay)

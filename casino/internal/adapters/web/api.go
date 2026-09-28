@@ -69,7 +69,6 @@ func RunApiAsync(ctx context.Context, cfg ApiConfig) (shutdownFn func(ctx contex
 		})
 	})
 
-	//TODO: setup sensible defaults
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,
 		Handler: router,

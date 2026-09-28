@@ -25,7 +25,5 @@ func Connect(ctx context.Context) (*pgxpool.Pool, error) {
 		return nil, err
 	}
 
-	//TODO: setup sensible defaults
-
 	return pgxpool.NewWithConfig(ctx, poolConfig)
 }

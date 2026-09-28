@@ -11,7 +11,9 @@ type Config struct {
 	*config.Base
 	CasinoWalletID string
 	API            API
+	Auth           Auth
 	Games          Games
+	Engines        Engines
 }
 
 func Load() (*Config, error) {
@@ -32,7 +34,13 @@ func Load() (*Config, error) {
 	if err := cfg.API.load(); err != nil {
 		return nil, err
 	}
+	if err := cfg.Auth.load(); err != nil {
+		return nil, err
+	}
 	if err := cfg.Games.load(); err != nil {
+		return nil, err
+	}
+	if err := cfg.Engines.load(); err != nil {
 		return nil, err
 	}
 
