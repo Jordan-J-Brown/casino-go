@@ -120,6 +120,7 @@ func (h *Handler) Next(w http.ResponseWriter, r *http.Request) {
 
 	h.ReplyJSON(w, r, responses.Round{
 		Balance:          result.Balance,
+		Bet:              result.Bet,
 		PayoutMultiplier: result.PayoutMutliplier,
 		RoundData:        result.PublicState,
 	})

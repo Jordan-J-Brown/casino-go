@@ -32,6 +32,7 @@ type NextRequest struct {
 
 type RoundResult struct {
 	Balance          int64
+	Bet              int64
 	PayoutMutliplier string
 	PublicState      []byte
 }

@@ -114,6 +114,10 @@ func (service *service) getBetsForEngine(ctx context.Context, engineID string) (
 	return bets, nil
 }
 
+func (service *service) getPublicStatePayoutMultiplier(multiplier decimal.Decimal) string {
+	return multiplier.StringFixedBank(2)
+}
+
 func (service *service) Setup(ctx context.Context, request SetupRequest) (*SetupResult, *errorx.Error) {
 	bets, err := service.getBetsForEngine(ctx, request.EngineID)
 	if err != nil {
@@ -167,8 +171,7 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 		return nil, errorx.NewFromError(gamemodels.ErrInvalidBet)
 	}
 
-	result := new(RoundResult)
-
+	var result *RoundResult
 	transactErr := service.cfg.Stores.Transact(ctx, func(ctx context.Context, adapters Adapters) error {
 		gameExists, err := adapters.GameStore.IsActiveGamePresent(ctx, request.User.ID, request.EngineID)
 		if err != nil {
@@ -212,16 +215,20 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 		}
 		game.PrivateState = engineResponse.PrivateState
 		game.PublicState = engineResponse.PublicState
-		game.PayoutMultiplier = engineResponse.PayoutMultiplier
+		payoutMultiplier, _ := service.capPayoutMultiplier(engineResponse.PayoutMultiplier)
+		game.PayoutMultiplier = payoutMultiplier
 
 		err = adapters.GameStore.SaveGame(ctx, game)
 		if err != nil {
 			return errorx.New("failed to save game state", errorx.WithChildren(err))
 		}
 
-		result.Balance = srcBalance
-		result.PayoutMutliplier = engineResponse.PayoutMultiplier.String()
-		result.PublicState = engineResponse.PublicState
+		result = &RoundResult{
+			Balance:          srcBalance,
+			Bet:              game.Bet,
+			PayoutMutliplier: service.getPublicStatePayoutMultiplier(game.PayoutMultiplier),
+			PublicState:      game.PublicState,
+		}
 
 		return ctx.Err()
 	})
@@ -279,7 +286,8 @@ func (service *service) Next(ctx context.Context, request NextRequest) (*RoundRe
 
 		result = &RoundResult{
 			Balance:          wallet.BalanceMinor,
-			PayoutMutliplier: game.PayoutMultiplier.String(),
+			Bet:              game.Bet,
+			PayoutMutliplier: service.getPublicStatePayoutMultiplier(game.PayoutMultiplier),
 			PublicState:      game.PublicState,
 		}
 
