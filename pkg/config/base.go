@@ -13,6 +13,7 @@ type Base struct {
 	ServiceVersion string
 	Nats           Nats
 	Tracer         Tracer
+	Logging        Logging
 }
 
 func Load() (base *Base, err error) {
@@ -54,6 +55,9 @@ func Load() (base *Base, err error) {
 		return nil, err
 	}
 	if err := base.Tracer.load(base.Env); err != nil {
+		return nil, err
+	}
+	if err := base.Logging.load(); err != nil {
 		return nil, err
 	}
 
