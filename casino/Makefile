@@ -1,11 +1,9 @@
 # TODO: Document commands in README.md
 
 run:
-	OTEL_SERVICE_NAME=casino \
-	OTEL_SERVICE_VERSION=0.0.0 \
-	OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4317 \
-	OTEL_EXPORTER_OTLP_INSECURE=true \
-	go run cmd/main.go
+	@. ./scripts/db/env.sh; \
+	PG_CONNECTION_STRING=postgresql://$${PG_SUPERUSER}:$${PG_SUPERUSER_PASSWORD}@$${PG_HOST}:$${PG_PORT}/$${PG_DB_NAME}?sslmode=$${PG_SSL_MODE} \
+	go run ./cmd/service/
 
 generate:
 	go generate ./...
