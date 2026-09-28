@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 
 	"github.com/Jordan-J-Brown/casino-go/engines/mines/internal/config"
@@ -14,7 +15,12 @@ func main() {
 		panic("failed to load config: " + err.Error())
 	}
 
-	logger := logsx.NewLogger(os.Stdout)
+	logger := logsx.NewLogger(os.Stdout, logsx.Config{
+		Type: cfg.Logging.Type,
+		HandlerOpts: &slog.HandlerOptions{
+			Level: cfg.Logging.Level,
+		},
+	})
 
 	engine.Start(cfg, logger)
 }
