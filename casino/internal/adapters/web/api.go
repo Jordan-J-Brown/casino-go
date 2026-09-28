@@ -81,7 +81,7 @@ func RunApiAsync(ctx context.Context, cfg ApiConfig) (shutdownFn func(ctx contex
 	go func(logger logsx.Logger) {
 		err := server.ListenAndServe()
 		if err != nil {
-			logger.ErrorContext(ctx, "listen and serve error", "error", err)
+			panic("listen and serve error: " + err.Error())
 		}
 	}(cfg.Logger)
 
