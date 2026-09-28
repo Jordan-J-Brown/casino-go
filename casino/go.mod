@@ -10,7 +10,6 @@ require (
 	github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20260906205051-2c358b535e51
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/jackc/pgx/v5 v5.11.0
-	github.com/joho/godotenv v1.5.1
 	github.com/nats-io/nats.go v1.53.1
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/viper v1.21.0

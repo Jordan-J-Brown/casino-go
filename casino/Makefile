@@ -1,4 +1,6 @@
-# TODO: Document commands in README.md
+platform:
+	@. ./scripts/db/env.sh; \
+	docker compose -f ./compose/docker-compose.local.yaml up -d
 
 run:
 	@. ./scripts/db/env.sh; \
@@ -12,10 +14,6 @@ generate:
 psql:
 	@. ./scripts/db/env.sh; \
 	psql postgresql://$${PG_SUPERUSER}:$${PG_SUPERUSER_PASSWORD}@$${PG_HOST}:$${PG_PORT}/$${PG_DB_NAME}?sslmode=$${PG_SSL_MODE}
-
-db:
-	@chmod 0700 ./scripts/db/make_db.sh; \
-	./scripts/db/make_db.sh
 
 init-db:
 	@path=./scripts/db/init.sh; \
