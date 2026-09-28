@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Jordan-J-Brown/casino-go/pkg/contextx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/httpx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/mimex"
@@ -127,6 +128,11 @@ func (c *client) Close(ctx context.Context, engineID string, request enginemsg.C
 
 func (c *client) getHeaders(ctx context.Context) nats.Header {
 	h := nats.Header{}
+
+	cid := contextx.CorrelationIdFromContext(ctx)
+	if cid != "" {
+		h.Add(natsx.HeaderCorrelationID, cid)
+	}
 
 	otel.GetTextMapPropagator().Inject(ctx, &natsx.NatsOtelHeaderCarrier{Header: h})
 

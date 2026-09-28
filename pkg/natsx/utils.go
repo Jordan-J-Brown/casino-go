@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Jordan-J-Brown/casino-go/pkg/contextx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"github.com/nats-io/nats.go"
@@ -56,6 +57,11 @@ func HandleRPC[Req, Res any](
 				})
 			}
 		}()
+
+		cid := msg.Header.Get(HeaderCorrelationID)
+		if cid != "" {
+			ctx = context.WithValue(ctx, contextx.CtxKeyCorrelationID, cid)
+		}
 
 		ctx = otel.GetTextMapPropagator().Extract(ctx, &NatsOtelHeaderCarrier{msg.Header})
 		ctx, span := tracer.Start(ctx, msg.Subject)

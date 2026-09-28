@@ -11,6 +11,8 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/pkg/msg/casinomsg"
 	"github.com/Jordan-J-Brown/casino-go/pkg/natsx"
 	"github.com/nats-io/nats.go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -126,6 +128,14 @@ func (server *Server) registerEngine(ctx context.Context) (err error) {
 		}
 	}()
 
+	ctx, span := server.tracer.Start(ctx, "engine-register", trace.WithAttributes(
+		attribute.String("engine_id", server.cfg.EngineID),
+	))
+	defer span.End()
+
+	header := nats.Header{}
+	otel.GetTextMapPropagator().Inject(ctx, &natsx.NatsOtelHeaderCarrier{Header: header})
+
 	registerData, err := server.cfg.RegisterFunc(ctx)
 	if err != nil {
 		return err
@@ -135,6 +145,7 @@ func (server *Server) registerEngine(ctx context.Context) (err error) {
 	var response RegisterEngineResponse
 	var errResponse natsx.ErrorResponse
 	req, err := server.client.R().
+		SetHeaders(header).
 		SetBody(&registerData).
 		SetResult(&response).
 		SetError(&errResponse).

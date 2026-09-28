@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	HeaderStatus = "Status"
+	HeaderStatus        = "Status"
+	HeaderCorrelationID = "Correlation-ID"
 )
 
 type NatsOtelHeaderCarrier struct {
