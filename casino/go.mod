@@ -2,12 +2,10 @@ module github.com/Jordan-J-Brown/casino-go/casino
 
 go 1.27
 
-replace github.com/Jordan-J-Brown/casino-go/pkg => ../pkg
-
-replace github.com/Jordan-J-Brown/casino-go/games/dice => ../games/dice
+// replace github.com/Jordan-J-Brown/casino-go/pkg => ../pkg
 
 require (
-	github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20260906205051-2c358b535e51
+	github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20260929131058-69eea81dcc4f
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/nats-io/nats.go v1.53.1

@@ -1,4 +1,4 @@
-name: casino
+name: casino-platform
 
 services:
   casino-db:

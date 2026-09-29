@@ -1,6 +1,6 @@
 platform:
 	@. ./scripts/db/env.sh; \
-	docker compose -f ./compose/docker-compose.local.yaml up -d
+	docker compose -f ./compose/docker-compose.platform.local.yaml up -d
 
 run:
 	@. ./scripts/db/env.sh; \
@@ -9,6 +9,14 @@ run:
 
 generate:
 	go generate ./...
+
+tag :=
+build: 
+	@GITHUB_TOKEN=$$GITHUB_TOKEN \
+	docker build --tag casino:${tag} \
+		--secret id=GITHUB_TOKEN \
+		--build-arg API_PORT=10000 \
+		--build-arg CONFIG_PATH=configs/config.prod.yaml .
 
 # --- DATABASE ---
 psql:
