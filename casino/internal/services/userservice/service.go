@@ -50,7 +50,7 @@ func (s *service) GetUserFromSessionID(ctx context.Context, sessionID string) (*
 }
 
 func (s *service) CreateUserWithBalance(ctx context.Context, username string, balance int64) (*usermodels.User, error) {
-	if username == "" {
+	if !isValidUsername(username) {
 		return nil, usermodels.ErrInvalidUsername
 	}
 	if balance < 0 {
@@ -58,6 +58,21 @@ func (s *service) CreateUserWithBalance(ctx context.Context, username string, ba
 	}
 
 	return s.cfg.Store.CreateUserWithBalance(ctx, username, balance)
+}
+
+func isValidUsername(username string) bool {
+	if username == "" {
+		return false
+	}
+	for _, char := range username {
+		if !('0' <= char && char <= '9') &&
+			!('a' <= char && char <= 'z') &&
+			!('A' <= char && char <= 'Z') &&
+			char != '-' && char != '.' && char != '_' {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *service) CreateSessionForUser(ctx context.Context, user *usermodels.User) (sessionID string, err error) {

@@ -48,8 +48,14 @@ func (h *Handler) Authenticate(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userService.CreateUserWithBalance(ctx, request.Username, request.Balance)
 	if err != nil {
+		if err == usermodels.ErrInvalidUsername {
+			h.ReplyErrorJSON(ctx, w, "ERR_INVALID_USERNAME", http.StatusBadRequest)
+			return
+		}
+
 		h.Logger.ErrorContext(ctx, "failed to create user", "request", request, "error", err)
 		h.ReplyInternalError(w)
+
 		return
 	}
 	sessionID, err := h.userService.CreateSessionForUser(ctx, user)
