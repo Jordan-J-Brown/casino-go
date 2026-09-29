@@ -57,6 +57,10 @@ func RunApiAsync(ctx context.Context, cfg ApiConfig) (shutdownFn func(ctx contex
 	)
 
 	router.Route("/api/v1", func(r chi.Router) {
+		r.Head("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		})
+
 		r.Post("/auth", authHandler.Authenticate)
 
 		r.Route("/games", func(r chi.Router) {
