@@ -38,7 +38,7 @@ func RunApiAsync(ctx context.Context, cfg ApiConfig) (shutdownFn func(ctx contex
 	router := chi.NewRouter()
 
 	router.Use(
-		chimiddleware.Logger,
+		chimiddleware.Logger, //TODO: use the application's logger
 		chimiddleware.RequestID,
 		middleware.CorrelationID,
 		chimiddleware.Recoverer,
