@@ -5,9 +5,19 @@ services:
     container_name: casino
     image: casino:local
     environment:
+      SERVICE_VERSION: v0.0.0
       API_PORT: 10000
-      SERVICE_VERSION: "v1.0.0"
-      NATS_URL: "nats://127.0.0.1:4222"
+      WALLET_ID: 9dea2723-e907-4995-a0dd-e0f6ca00fcb7
+      NATS_URL: nats://nats:4222
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_INSECURE: true
+      PG_CONNECTION_STRING: postgres://service:password@postgres:5432/service_db?sslmode=disable
     ports:
-      - "$API_PORT:80"
+      - 10000:10000
     restart: always
+    networks:
+      - casino-net
+
+networks:
+  casino-net:
+    external: true

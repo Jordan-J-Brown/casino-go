@@ -18,6 +18,8 @@ services:
       timeout: 5s
       retries: 5
     restart: always
+    networks:
+      - casino-net
 
   nats:
     container_name: nats
@@ -32,6 +34,8 @@ services:
     volumes:
       - nats-data:/data
     restart: always
+    networks:
+      - casino-net
 
   jaeger:
     container_name: jaeger
@@ -41,6 +45,12 @@ services:
       - "4317:4317"
       - "4318:4318"
     restart: always
+    networks:
+      - casino-net
 
 volumes:
   nats-data:
+
+networks:
+  casino-net:
+    external: true

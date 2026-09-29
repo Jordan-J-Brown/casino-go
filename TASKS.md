@@ -1,5 +1,6 @@
 # Tasks
 
+- Validate user input
 - Convert JSON messages to Protobuf once communication protocol has been established
 - Build stress test and allow profiling of the casino
 - Dockerise Casino and mines engine
