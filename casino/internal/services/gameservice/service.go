@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"sync"
 	"time"
 	"uuid"
 
@@ -32,6 +33,8 @@ type service struct {
 	EngineClient        engineclient.Client
 	Logger              logsx.Logger
 	CasinoWalletID      string
+
+	gameLocker *gameLocker
 }
 
 type Config struct {
@@ -64,6 +67,8 @@ func New(ctx context.Context, cfg Config) (Service, error) {
 		EngineClient:        cfg.EngineClient,
 		Logger:              cfg.Logger,
 		CasinoWalletID:      cfg.CasinoWalletID,
+
+		gameLocker: newGameLocker(),
 	}, nil
 }
 
@@ -111,6 +116,11 @@ func (service *service) Setup(ctx context.Context, request SetupRequest) (*Setup
 }
 
 func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundResult, *errorx.Error) {
+	if !service.gameLocker.tryLockGameForAction(actionPlay, request.User.ID, request.EngineID) {
+		return nil, errorx.NewFromType(string(gamemodels.ErrTooManyRequests), errorx.WithCode(errorx.ClientError))
+	}
+	defer service.gameLocker.unlockGame(actionPlay, request.User.ID, request.EngineID)
+
 	bets, err := service.getBetsForEngine(ctx, request.EngineID)
 	if err != nil {
 		return nil, err
@@ -397,4 +407,50 @@ func (service *service) getBetsForEngine(ctx context.Context, engineID string) (
 
 func (service *service) getPublicStatePayoutMultiplier(multiplier decimal.Decimal) string {
 	return multiplier.StringFixedBank(2)
+}
+
+type gameAction int
+
+const (
+	actionPlay gameAction = iota
+	actionNext
+	actionClose
+)
+
+type gameLocker struct {
+	actionLocks [3]sync.Mutex
+	gameLocks   map[string]struct{}
+}
+
+func newGameLocker() *gameLocker {
+	return &gameLocker{
+		actionLocks: [3]sync.Mutex{},
+		gameLocks:   make(map[string]struct{}),
+	}
+}
+
+func (g *gameLocker) tryLockGameForAction(action gameAction, userID, engineID string) (locked bool) {
+	mu := &g.actionLocks[action]
+	mu.Lock()
+	defer mu.Unlock()
+
+	key := userID + engineID
+	_, exists := g.gameLocks[key]
+	if exists {
+		return false
+	}
+
+	g.gameLocks[key] = struct{}{}
+
+	return true
+}
+
+func (g *gameLocker) unlockGame(action gameAction, userID, engineID string) {
+	mu := &g.actionLocks[action]
+	mu.Lock()
+	defer mu.Unlock()
+
+	key := userID + engineID
+
+	delete(g.gameLocks, key)
 }

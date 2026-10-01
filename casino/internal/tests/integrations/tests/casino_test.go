@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Should test that with two concurrent plays, the second play does not go through before the first game is saved.
 func TestCasinoTwoConcurrentPlays(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
@@ -79,8 +80,15 @@ func TestCasinoTwoConcurrentPlays(t *testing.T) {
 
 	close(errChan)
 	errs := chans.Collect(errChan)
+	if !assert.Len(t, errs, 1) {
+		return
+	}
 
-	assert.Equal(t, []error{errors.New(string(gamemodels.ErrGameInProgress))}, errs)
+	errStr := errs[0].Error()
+	if errStr != string(gamemodels.ErrTooManyRequests) && errStr != string(gamemodels.ErrGameInProgress) {
+		t.Error("unexpected error type returned:", err)
+	}
+
 	assert.Equal(t, int64(1), playCounter.Load())
 }
 
