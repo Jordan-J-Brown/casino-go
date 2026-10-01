@@ -67,80 +67,6 @@ func New(ctx context.Context, cfg Config) (Service, error) {
 	}, nil
 }
 
-func (service *service) capPayoutMultiplier(m decimal.Decimal) (mult decimal.Decimal, capped bool) {
-	maxMult := decimal.NewFromInt(service.MaxPayoutMultiplier)
-	if m.GreaterThanOrEqual(maxMult) {
-		return maxMult, true
-	}
-	return m, false
-}
-
-func (service *service) transferFunds(ctx context.Context, store CasinoGameStore, args walletmodels.TransferArgs) (srcBalance, dstBalance int64, err error) {
-	err = store.TransferFunds(ctx, args, func(src, dst *walletmodels.Wallet) error {
-		if err = src.Debit(args.AmountMinor); err != nil {
-			if err == walletmodels.ErrInsufficientFunds {
-				return err
-			}
-			return errorx.New("failed to debit source wallet", errorx.WithChildren(err))
-		}
-		srcBalance = src.BalanceMinor
-
-		if err = dst.Credit(args.AmountMinor); err != nil {
-			return errorx.New("failed to credit destination wallet", errorx.WithChildren(err))
-		}
-		dstBalance = dst.BalanceMinor
-
-		return nil
-	})
-	return
-}
-
-func (service *service) limitBets(minBet, maxBet int64, allBets []int64) ([]int64, error) {
-	start, end := -1, -1
-	for i := range allBets {
-		switch allBets[i] {
-		case minBet:
-			start = i
-		case maxBet:
-			end = i + 1
-		}
-		if start > -1 && end > -1 {
-			return allBets[start:end], nil
-		}
-	}
-
-	return nil, errors.New("failed to limit bets")
-}
-
-func (service *service) getEngineReg(ctx context.Context, engineID string) (*enginemsg.EngineRegistration, *errorx.Error) {
-	engineReg, err := service.EngineRegistry.GetEngineRegistration(ctx, engineID)
-	if err != nil {
-		return nil, errorx.NewFromError(err)
-	}
-	if engineReg == nil {
-		return nil, errorx.NewFromType("ERR_ENGINE_NOT_FOUND", errorx.WithCode(errorx.ClientError))
-	}
-	return engineReg, nil
-}
-
-func (service *service) getBetsForEngine(ctx context.Context, engineID string) ([]int64, *errorx.Error) {
-	engineReg, regErr := service.getEngineReg(ctx, engineID)
-	if regErr != nil {
-		return nil, regErr
-	}
-
-	bets, limitErr := service.limitBets(engineReg.MinBet, engineReg.MaxBet, service.BetSizes)
-	if limitErr != nil {
-		return nil, errorx.NewFromError(limitErr)
-	}
-
-	return bets, nil
-}
-
-func (service *service) getPublicStatePayoutMultiplier(multiplier decimal.Decimal) string {
-	return multiplier.StringFixedBank(2)
-}
-
 func (service *service) Setup(ctx context.Context, request SetupRequest) (*SetupResult, *errorx.Error) {
 	bets, err := service.getBetsForEngine(ctx, request.EngineID)
 	if err != nil {
@@ -397,4 +323,78 @@ func (service *service) Close(ctx context.Context, request CloseRequest) (*Close
 	}
 
 	return result, nil
+}
+
+func (service *service) capPayoutMultiplier(m decimal.Decimal) (mult decimal.Decimal, capped bool) {
+	maxMult := decimal.NewFromInt(service.MaxPayoutMultiplier)
+	if m.GreaterThanOrEqual(maxMult) {
+		return maxMult, true
+	}
+	return m, false
+}
+
+func (service *service) transferFunds(ctx context.Context, store CasinoGameStore, args walletmodels.TransferArgs) (srcBalance, dstBalance int64, err error) {
+	err = store.TransferFunds(ctx, args, func(src, dst *walletmodels.Wallet) error {
+		if err = src.Debit(args.AmountMinor); err != nil {
+			if err == walletmodels.ErrInsufficientFunds {
+				return err
+			}
+			return errorx.New("failed to debit source wallet", errorx.WithChildren(err))
+		}
+		srcBalance = src.BalanceMinor
+
+		if err = dst.Credit(args.AmountMinor); err != nil {
+			return errorx.New("failed to credit destination wallet", errorx.WithChildren(err))
+		}
+		dstBalance = dst.BalanceMinor
+
+		return nil
+	})
+	return
+}
+
+func (service *service) limitBets(minBet, maxBet int64, allBets []int64) ([]int64, error) {
+	start, end := -1, -1
+	for i := range allBets {
+		switch allBets[i] {
+		case minBet:
+			start = i
+		case maxBet:
+			end = i + 1
+		}
+		if start > -1 && end > -1 {
+			return allBets[start:end], nil
+		}
+	}
+
+	return nil, errors.New("failed to limit bets")
+}
+
+func (service *service) getEngineReg(ctx context.Context, engineID string) (*enginemsg.EngineRegistration, *errorx.Error) {
+	engineReg, err := service.EngineRegistry.GetEngineRegistration(ctx, engineID)
+	if err != nil {
+		return nil, errorx.NewFromError(err)
+	}
+	if engineReg == nil {
+		return nil, errorx.NewFromType("ERR_ENGINE_NOT_FOUND", errorx.WithCode(errorx.ClientError))
+	}
+	return engineReg, nil
+}
+
+func (service *service) getBetsForEngine(ctx context.Context, engineID string) ([]int64, *errorx.Error) {
+	engineReg, regErr := service.getEngineReg(ctx, engineID)
+	if regErr != nil {
+		return nil, regErr
+	}
+
+	bets, limitErr := service.limitBets(engineReg.MinBet, engineReg.MaxBet, service.BetSizes)
+	if limitErr != nil {
+		return nil, errorx.NewFromError(limitErr)
+	}
+
+	return bets, nil
+}
+
+func (service *service) getPublicStatePayoutMultiplier(multiplier decimal.Decimal) string {
+	return multiplier.StringFixedBank(2)
 }
