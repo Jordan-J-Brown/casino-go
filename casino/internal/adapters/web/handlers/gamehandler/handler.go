@@ -133,7 +133,7 @@ func (h *Handler) Close(w http.ResponseWriter, r *http.Request) {
 	request, err := h.DecodeJSON[requests.Close](r.Body)
 	if err != nil {
 		h.Logger.ErrorContext(ctx, "failed to decode close request", "error", err)
-		h.ReplyInternalError(w)
+		h.ReplyInternalError(ctx, w)
 		return
 	}
 

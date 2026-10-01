@@ -2,9 +2,6 @@ package service
 
 import (
 	"context"
-	"log"
-	"os"
-	"os/signal"
 	"slices"
 
 	"github.com/Jordan-J-Brown/casino-go/pkg/config"
@@ -22,7 +19,6 @@ import (
 // Shutdown should be called to handle graceful shutdown.
 type BaseApplication struct {
 	shutdownChan  <-chan struct{}
-	signalStop    context.CancelFunc
 	shutdownFuncs []func(context.Context) error
 	Logger        logsx.Logger
 	Tracer        trace.Tracer
@@ -34,26 +30,21 @@ type BaseAppConfig struct {
 	ServiceVersion string
 	NatsCfg        *config.Nats
 	TracerCfg      *config.Tracer
-	Logger         logsx.Logger
 }
 
-func NewBaseApplication(cfg BaseAppConfig) (ctx context.Context, base *BaseApplication, err error) {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
-
+func NewBaseApplication(ctx context.Context, logger logsx.Logger, cfg BaseAppConfig) (base *BaseApplication, err error) {
 	baseApp := &BaseApplication{
 		shutdownChan:  ctx.Done(),
-		signalStop:    stop,
 		shutdownFuncs: make([]func(context.Context) error, 0, 2),
-		Logger:        cfg.Logger,
+		Logger:        logger,
 	}
 	defer func() {
 		if err != nil {
 			baseApp.Logger.ErrorContext(ctx, "failed to create base application", "error", err)
-			stop()
-			baseApp.shutdown(ctx)
+			baseApp.Shutdown()
 		}
 	}()
-	if cfg.Logger == nil {
+	if logger == nil {
 		baseApp.Logger = logsx.NopLogger{}
 	}
 
@@ -65,7 +56,7 @@ func NewBaseApplication(cfg BaseAppConfig) (ctx context.Context, base *BaseAppli
 		ExporterOtlpInsecure: cfg.TracerCfg.ExporterOtlpInsecure,
 	})
 	if err != nil {
-		return ctx, nil, err
+		return nil, err
 	}
 	baseApp.shutdownFuncs = append(baseApp.shutdownFuncs, otelShutDown)
 	baseApp.Tracer = otel.Tracer(cfg.ServiceName)
@@ -81,7 +72,7 @@ func NewBaseApplication(cfg BaseAppConfig) (ctx context.Context, base *BaseAppli
 		nats.MaxPingsOutstanding(cfg.NatsCfg.MaxPingsOutstanding),
 	)
 	if err != nil {
-		return ctx, nil, errorx.New("failed to create NATS connection", errorx.WithChildren(err))
+		return nil, errorx.New("failed to create NATS connection", errorx.WithChildren(err))
 	}
 	baseApp.NatsConn = nc
 	baseApp.shutdownFuncs = append(baseApp.shutdownFuncs, func(ctx context.Context) error {
@@ -94,25 +85,18 @@ func NewBaseApplication(cfg BaseAppConfig) (ctx context.Context, base *BaseAppli
 		return nil
 	})
 
-	return ctx, baseApp, nil
+	return baseApp, nil
 }
 
 func (base *BaseApplication) RegisterShutdownFunc(fn func(context.Context) error) {
 	base.shutdownFuncs = append(base.shutdownFuncs, fn)
 }
 
-func (base *BaseApplication) WaitForShutdown(ctx context.Context) {
-	<-ctx.Done()
-
-	base.Logger.InfoContext(ctx, "\nGracefully shutting down...")
-
-	base.shutdown(context.Background())
-}
-
-func (base *BaseApplication) shutdown(ctx context.Context) {
+func (base *BaseApplication) Shutdown() {
+	ctx := context.Background()
 	for i, shutdown := range slices.Backward(base.shutdownFuncs) {
 		if err := shutdown(ctx); err != nil {
-			log.Fatalf("failed to run shutdown at index %d. Error: %s", i, err.Error())
+			base.Logger.ErrorContext(ctx, "failed to run shutdown at index %d. Error: %s", i, err.Error())
 		}
 	}
 }

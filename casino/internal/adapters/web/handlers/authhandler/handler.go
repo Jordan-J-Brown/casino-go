@@ -54,14 +54,14 @@ func (h *Handler) Authenticate(w http.ResponseWriter, r *http.Request) {
 		}
 
 		h.Logger.ErrorContext(ctx, "failed to create user", "request", request, "error", err)
-		h.ReplyInternalError(w)
+		h.ReplyInternalError(ctx, w)
 
 		return
 	}
 	sessionID, err := h.userService.CreateSessionForUser(ctx, user)
 	if err != nil {
 		h.Logger.ErrorContext(ctx, "failed to create session for user", "error", err, "user", user)
-		h.ReplyInternalError(w)
+		h.ReplyInternalError(ctx, w)
 		return
 	}
 
@@ -72,16 +72,18 @@ func (h *Handler) Authenticate(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
 		buf := bytes.NewBuffer(make([]byte, 0, r.ContentLength))
 		_, err := io.Copy(buf, r.Body)
 		if err != nil {
-			h.Logger.ErrorContext(r.Context(), "failed to read body", "error", err)
-			h.ReplyInternalError(w)
+			h.Logger.ErrorContext(ctx, "failed to read body", "error", err)
+			h.ReplyInternalError(ctx, w)
 			return
 		}
 		if err := r.Body.Close(); err != nil {
-			h.Logger.ErrorContext(r.Context(), "failed to close body", "error", err)
-			h.ReplyInternalError(w)
+			h.Logger.ErrorContext(ctx, "failed to close body", "error", err)
+			h.ReplyInternalError(ctx, w)
 			return
 		}
 
@@ -92,18 +94,26 @@ func (h *Handler) Middleware(next http.Handler) http.Handler {
 
 		var authSessionID authSessionID
 		if err := json.NewDecoder(buf).Decode(&authSessionID); err != nil {
-			h.Logger.ErrorContext(r.Context(), "failed to decode auth middleware data", "error", err)
-			h.ReplyInternalError(w)
+			h.Logger.ErrorContext(ctx, "failed to decode auth middleware data", "error", err)
+			h.ReplyInternalError(ctx, w)
 			return
 		}
 
-		user, err := h.userService.GetUserFromSessionID(r.Context(), authSessionID.SessionID)
+		user, err := h.userService.GetUserFromSessionID(ctx, authSessionID.SessionID)
 		if err != nil {
-			http.Error(w, "Not authenticated.", http.StatusUnauthorized)
+			h.Logger.ErrorContext(ctx, "failed to retrieve user from session",
+				"session_id", authSessionID,
+				"error", err,
+			)
+			h.ReplyInternalError(ctx, w)
+			return
+		}
+		if user == nil {
+			h.ReplyErrorJSON(ctx, w, "NOT_AUTHENTICATED", http.StatusUnauthorized)
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), usermodels.CtxKeyUser, user)
+		ctx = context.WithValue(ctx, usermodels.CtxKeyUser, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

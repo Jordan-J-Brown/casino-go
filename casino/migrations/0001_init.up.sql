@@ -18,9 +18,17 @@ CREATE INDEX session_expiry ON service.user_sessions (expires_at);
 
 CREATE TABLE IF NOT EXISTS service.wallets (
   wallet_id     uuid    PRIMARY KEY,
-  user_id       uuid    REFERENCES service.users ON DELETE RESTRICT,
   balance_minor bigint  DEFAULT 0,
   soft_deleted  boolean DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS service.user_wallets (
+  user_id   uuid REFERENCES service.users   ON DELETE RESTRICT,
+  wallet_id uuid REFERENCES service.wallets ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS service.casino_wallets (
+  wallet_id uuid REFERENCES service.wallets ON DELETE RESTRICT
 );
 
 CREATE TYPE transaction_type AS ENUM ('DEBIT', 'CREDIT');

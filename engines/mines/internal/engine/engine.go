@@ -25,27 +25,31 @@ type Engine struct {
 	logger    logsx.Logger
 }
 
-func Start(cfg *config.Config, logger logsx.Logger) error {
-	engine := &Engine{
+func Start(ctx context.Context, cfg *config.Config, logger logsx.Logger) (engine *Engine, err error) {
+	engine = &Engine{
 		cfg:    cfg,
 		logger: logger,
 	}
+	defer func() {
+		if err != nil {
+			engine.Shutdown()
+		}
+	}()
 
 	mathModel, err := mathmodel.LoadFromFile()
 	if err != nil {
-		return errors.New("failed to load math model: " + err.Error())
+		return engine, errors.New("failed to load math model: " + err.Error())
 	}
 	engine.mathModel = mathModel
 
-	ctx, baseApp, err := service.NewBaseApplication(service.BaseAppConfig{
+	baseApp, err := service.NewBaseApplication(ctx, logger, service.BaseAppConfig{
 		ServiceName:    cfg.ServiceName,
 		ServiceVersion: cfg.ServiceVersion,
 		NatsCfg:        &cfg.Nats,
 		TracerCfg:      &cfg.Tracer,
-		Logger:         logger,
 	})
 	if err != nil {
-		return err
+		return
 	}
 	engine.BaseApplication = baseApp
 
@@ -58,15 +62,11 @@ func Start(cfg *config.Config, logger logsx.Logger) error {
 		CloseHandler: engine.Close,
 	})
 	if err != nil {
-		return err
+		return
 	}
 	engine.msgServer = msgServer
 
-	logger.InfoContext(ctx, "Engine running...")
-
-	engine.WaitForShutdown(ctx)
-
-	return nil
+	return
 }
 
 func (engine *Engine) GetRegistration(ctx context.Context) (*enginemsg.EngineRegistration, error) {

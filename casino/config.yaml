@@ -6,7 +6,7 @@ api:
   port: 10000
 
 wallet:
-  id: 9dea2723-e907-4995-a0dd-e0f6ca00fcb7
+  id: 9dea2723-e907-4995-a0dd-e0f6ca00fcb7 #TODO: Consider moving this to a constant within the casino. If the wallet doesn't exist, it should be created.
 
 games:
   bet_sizes: 10,20,50,100,200,500,1000,2000,5000,10000,25000,50000,100000

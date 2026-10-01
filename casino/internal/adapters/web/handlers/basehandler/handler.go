@@ -26,7 +26,7 @@ func (base *Base) DecodeJSON[T any](r io.Reader) (*T, error) {
 	return value, err
 }
 
-func (base *Base) ReplyInternalError(w http.ResponseWriter, msg ...string) {
+func (base *Base) ReplyInternalError(ctx context.Context, w http.ResponseWriter, msg ...string) {
 	var message string
 	if len(msg) == 1 {
 		message = msg[0]
@@ -34,7 +34,16 @@ func (base *Base) ReplyInternalError(w http.ResponseWriter, msg ...string) {
 		message = "Something went wrong"
 	}
 
-	http.Error(w, message, http.StatusInternalServerError)
+	base.SetJsonContentType(w)
+	w.WriteHeader(http.StatusInternalServerError)
+
+	err := json.NewEncoder(w).Encode(responses.Error{
+		Type:    "UNKNOWN",
+		Message: message,
+	})
+	if err != nil {
+		base.Logger.ErrorContext(ctx, "failed to encode error response", "error", err)
+	}
 }
 
 func (base *Base) ReplyErrorJSON(ctx context.Context, w http.ResponseWriter, errType string, httpCode int, msg ...string) {

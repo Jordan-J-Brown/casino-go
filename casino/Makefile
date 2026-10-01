@@ -10,7 +10,7 @@ platform-down:
 # Runs the casino service locally via go run
 run:
 	@. ./scripts/db/env.sh; \
-	PG_CONNECTION_STRING=postgresql://$${PG_SUPERUSER}:$${PG_SUPERUSER_PASSWORD}@$${PG_HOST}:$${PG_PORT}/$${PG_DB_NAME}?sslmode=$${PG_SSL_MODE} \
+	PG_CONNECTION_STRING=postgresql://$${PG_DB_ROLE}:$${PG_DB_ROLE_PASSWORD}@$${PG_HOST}:$${PG_PORT}/$${PG_DB_NAME}?sslmode=$${PG_SSL_MODE} \
 	go run ./cmd/service/
 
 generate:
@@ -55,4 +55,4 @@ migrate-down:
 		echo "golang-migrate not installed. How to install: https://github.com/golang-migrate/migrate/tree/master/cmd/migrate"; \
 		exit 1; \
 	fi; \
-	migrate -path 'migrations' -database "postgresql://$${PG_SUPERUSER}:$${PG_SUPERUSER_PASSWORD}@$${PG_HOST}:$${PG_PORT}/$${PG_DB_NAME}?sslmode=$${PG_SSL_MODE}" down
+	migrate -path 'migrations' -database "postgresql://$${PG_SUPERUSER}:$${PG_SUPERUSER_PASSWORD}@$${PG_HOST}:$${PG_PORT}/$${PG_DB_NAME}?sslmode=$${PG_SSL_MODE}" down -all

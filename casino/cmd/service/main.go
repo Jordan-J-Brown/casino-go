@@ -1,15 +1,20 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
+	"os/signal"
 
-	"github.com/Jordan-J-Brown/casino-go/casino/internal/app"
+	casinoapp "github.com/Jordan-J-Brown/casino-go/casino/internal/casinoapp"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/config"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 )
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer stop()
+
 	cfg, err := config.Load()
 	if err != nil {
 		panic(err)
@@ -22,15 +27,13 @@ func main() {
 		},
 	})
 
-	err = app.Run(app.AppConfig{
-		ServiceName:    cfg.ServiceName,
-		ServiceVersion: cfg.ServiceVersion,
-		NatsCfg:        &cfg.Nats,
-		TracerCfg:      &cfg.Tracer,
-		Logger:         logger,
-		Config:         cfg,
-	})
+	app, err := casinoapp.Run(ctx, logger, cfg)
 	if err != nil {
 		panic(err)
 	}
+	defer app.Shutdown()
+
+	<-ctx.Done()
+
+	logger.DebugContext(ctx, "Shutting down...")
 }

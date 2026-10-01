@@ -1,0 +1,99 @@
+package casinotestclient
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+
+	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
+	"github.com/Jordan-J-Brown/casino-go/casino/pkg/responses"
+	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
+)
+
+const (
+	DefaultBaseURL string = "http://localhost:10000/api/v1"
+)
+
+var (
+	DefaultClient = &Client{
+		hclient: http.DefaultClient,
+		baseURL: DefaultBaseURL,
+	}
+)
+
+type Client struct {
+	hclient *http.Client
+	baseURL string
+}
+
+func New(
+	baseURL string,
+	httpClient *http.Client,
+) *Client {
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	return &Client{
+		baseURL: baseURL,
+		hclient: httpClient,
+	}
+}
+
+func (c *Client) Auth(r requests.Auth) (*Response[responses.Auth], error) {
+	return c.post[requests.Auth, responses.Auth](c.baseURL+"/auth", r)
+}
+
+func (c *Client) Setup(r requests.Setup) (*Response[responses.Setup], error) {
+	return c.post[requests.Setup, responses.Setup](c.baseURL+"/games/setup", r)
+}
+
+func (c *Client) Play(r requests.Play) (*Response[responses.Round], error) {
+	return c.post[requests.Play, responses.Round](c.baseURL+"/games/play", r)
+}
+
+func (c *Client) Next(r requests.Next) (*Response[responses.Round], error) {
+	return c.post[requests.Next, responses.Round](c.baseURL+"/games/next", r)
+}
+
+func (c *Client) Close(r requests.Close) (*Response[responses.Close], error) {
+	return c.post[requests.Close, responses.Close](c.baseURL+"/games/close", r)
+}
+
+type Response[R any] struct {
+	HttpResponse *http.Response
+	IsError      bool
+	Error        responses.Error
+	Result       R
+}
+
+func (c *Client) post[Req, Res any](url string, r Req) (*Response[Res], error) {
+	data, err := json.Marshal(r)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.hclient.Post(url, "application/json", bytes.NewReader(data))
+	if err != nil {
+		return nil, errorx.Newf("failed to post data to: %s", url, errorx.WithChildren(err))
+	}
+	defer resp.Body.Close()
+
+	res := Response[Res]{
+		HttpResponse: resp,
+	}
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		err := json.NewDecoder(resp.Body).Decode(&res.Result)
+		if err != nil {
+			return nil, errorx.New("failed to decode resul", errorx.WithChildren(err))
+		}
+	} else {
+		res.IsError = true
+		err := json.NewDecoder(resp.Body).Decode(&res.Error)
+		if err != nil {
+			return nil, errorx.Newf("failed to decode error. Status: %s", res.HttpResponse.Status, errorx.WithChildren(err))
+		}
+	}
+
+	return &res, nil
+}
