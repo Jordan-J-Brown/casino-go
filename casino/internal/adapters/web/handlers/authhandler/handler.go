@@ -40,28 +40,22 @@ func (h *Handler) Authenticate(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.Tracer.Start(r.Context(), "casino-auth")
 	defer span.End()
 
-	request, err := h.Base.DecodeJSON[requests.Auth](r.Body)
-	if err != nil {
+	request, decodeErr := h.Base.DecodeJSON[requests.Auth](r.Body)
+	if decodeErr != nil {
 		http.Error(w, "failed to unmarshal request data", http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.userService.CreateUserWithBalance(ctx, request.Username, request.Balance)
 	if err != nil {
-		if err == usermodels.ErrInvalidUsername {
-			h.ReplyErrorJSON(ctx, w, "ERR_INVALID_USERNAME", http.StatusBadRequest)
-			return
-		}
-
 		h.Logger.ErrorContext(ctx, "failed to create user", "request", request, "error", err)
-		h.ReplyInternalError(ctx, w)
-
+		h.HandleError(ctx, w, err)
 		return
 	}
 	sessionID, err := h.userService.CreateSessionForUser(ctx, user)
 	if err != nil {
 		h.Logger.ErrorContext(ctx, "failed to create session for user", "error", err, "user", user)
-		h.ReplyInternalError(ctx, w)
+		h.HandleError(ctx, w, err)
 		return
 	}
 
@@ -75,15 +69,15 @@ func (h *Handler) Middleware(next http.Handler) http.Handler {
 		ctx := r.Context()
 
 		buf := bytes.NewBuffer(make([]byte, 0, r.ContentLength))
-		_, err := io.Copy(buf, r.Body)
-		if err != nil {
-			h.Logger.ErrorContext(ctx, "failed to read body", "error", err)
-			h.ReplyInternalError(ctx, w)
+		_, copyErr := io.Copy(buf, r.Body)
+		if copyErr != nil {
+			h.Logger.ErrorContext(ctx, "failed to read body", "error", copyErr)
+			h.HandleError(ctx, w, copyErr)
 			return
 		}
-		if err := r.Body.Close(); err != nil {
-			h.Logger.ErrorContext(ctx, "failed to close body", "error", err)
-			h.ReplyInternalError(ctx, w)
+		if closeErr := r.Body.Close(); closeErr != nil {
+			h.Logger.ErrorContext(ctx, "failed to close body", "error", closeErr)
+			h.HandleError(ctx, w, closeErr)
 			return
 		}
 
@@ -95,7 +89,7 @@ func (h *Handler) Middleware(next http.Handler) http.Handler {
 		var authSessionID authSessionID
 		if err := json.NewDecoder(buf).Decode(&authSessionID); err != nil {
 			h.Logger.ErrorContext(ctx, "failed to decode auth middleware data", "error", err)
-			h.ReplyInternalError(ctx, w)
+			h.HandleError(ctx, w, err)
 			return
 		}
 
@@ -105,7 +99,7 @@ func (h *Handler) Middleware(next http.Handler) http.Handler {
 				"session_id", authSessionID,
 				"error", err,
 			)
-			h.ReplyInternalError(ctx, w)
+			h.HandleError(ctx, w, err)
 			return
 		}
 		if user == nil {

@@ -1,7 +1,6 @@
 package gamehandler
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web/handlers/basehandler"
@@ -9,7 +8,6 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/gameservice"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/responses"
-	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -38,7 +36,7 @@ func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {
 	request, err := h.DecodeJSON[requests.Setup](r.Body)
 	if err != nil {
 		h.Logger.ErrorContext(ctx, "failed to decode setup request", "error", err)
-		h.handleError(ctx, w, err)
+		h.HandleError(ctx, w, err)
 		return
 	}
 
@@ -50,7 +48,7 @@ func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {
 	})
 	if setupErr != nil {
 		h.Logger.ErrorContext(ctx, "failed to retrieve setup result", "error", setupErr)
-		h.handleError(ctx, w, setupErr)
+		h.HandleError(ctx, w, setupErr)
 		return
 	}
 
@@ -69,7 +67,7 @@ func (h *Handler) Play(w http.ResponseWriter, r *http.Request) {
 	request, err := h.DecodeJSON[requests.Play](r.Body)
 	if err != nil {
 		h.Logger.ErrorContext(ctx, "failed to decode play request", "error", err)
-		h.handleError(ctx, w, err)
+		h.HandleError(ctx, w, err)
 		return
 	}
 
@@ -83,7 +81,7 @@ func (h *Handler) Play(w http.ResponseWriter, r *http.Request) {
 	})
 	if playErr != nil {
 		h.Logger.ErrorContext(ctx, "failed to retrieve play result from game service", "error", playErr)
-		h.handleError(ctx, w, playErr)
+		h.HandleError(ctx, w, playErr)
 		return
 	}
 
@@ -101,7 +99,7 @@ func (h *Handler) Next(w http.ResponseWriter, r *http.Request) {
 	request, err := h.DecodeJSON[requests.Next](r.Body)
 	if err != nil {
 		h.Logger.ErrorContext(ctx, "failed to decode next request", "error", err)
-		h.handleError(ctx, w, err)
+		h.HandleError(ctx, w, err)
 		return
 	}
 
@@ -114,7 +112,7 @@ func (h *Handler) Next(w http.ResponseWriter, r *http.Request) {
 	})
 	if nextErr != nil {
 		h.Logger.ErrorContext(ctx, "failed to retrieve next result from game service", "error", nextErr)
-		h.handleError(ctx, w, nextErr)
+		h.HandleError(ctx, w, nextErr)
 		return
 	}
 
@@ -133,7 +131,7 @@ func (h *Handler) Close(w http.ResponseWriter, r *http.Request) {
 	request, err := h.DecodeJSON[requests.Close](r.Body)
 	if err != nil {
 		h.Logger.ErrorContext(ctx, "failed to decode close request", "error", err)
-		h.ReplyInternalError(ctx, w)
+		h.HandleError(ctx, w, err)
 		return
 	}
 
@@ -145,33 +143,11 @@ func (h *Handler) Close(w http.ResponseWriter, r *http.Request) {
 	})
 	if closeErr != nil {
 		h.Logger.ErrorContext(ctx, "failed to retrieve close result", "error", closeErr)
-		h.handleError(ctx, w, closeErr)
+		h.HandleError(ctx, w, closeErr)
 		return
 	}
 
 	h.ReplyJSON(w, r, responses.Close{
 		Balance: result.Balance,
 	})
-}
-
-func (h *Handler) handleError(ctx context.Context, w http.ResponseWriter, err error) {
-	if errX, ok := err.(*errorx.Error); ok {
-		var statusCode int
-		if errX.Code().IsClientError() {
-			statusCode = http.StatusBadRequest
-		} else {
-			statusCode = http.StatusInternalServerError
-		}
-
-		errType := errX.Type()
-		if errType == "" {
-			errType = "UNKNOWN"
-		}
-
-		h.ReplyErrorJSON(ctx, w, errType, statusCode)
-
-		return
-	}
-
-	h.ReplyErrorJSON(ctx, w, "UNKNOWN", http.StatusInternalServerError)
 }

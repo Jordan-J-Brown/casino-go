@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/responses"
+	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -26,24 +27,26 @@ func (base *Base) DecodeJSON[T any](r io.Reader) (*T, error) {
 	return value, err
 }
 
-func (base *Base) ReplyInternalError(ctx context.Context, w http.ResponseWriter, msg ...string) {
-	var message string
-	if len(msg) == 1 {
-		message = msg[0]
-	} else {
-		message = "Something went wrong"
+func (base *Base) HandleError(ctx context.Context, w http.ResponseWriter, err error) {
+	if errX, ok := err.(*errorx.Error); ok {
+		var statusCode int
+		if errX.Code().IsClientError() {
+			statusCode = http.StatusBadRequest
+		} else {
+			statusCode = http.StatusInternalServerError
+		}
+
+		errType := errX.Type()
+		if errType == "" {
+			errType = "UNKNOWN"
+		}
+
+		base.ReplyErrorJSON(ctx, w, errType, statusCode)
+
+		return
 	}
 
-	base.SetJsonContentType(w)
-	w.WriteHeader(http.StatusInternalServerError)
-
-	err := json.NewEncoder(w).Encode(responses.Error{
-		Type:    "UNKNOWN",
-		Message: message,
-	})
-	if err != nil {
-		base.Logger.ErrorContext(ctx, "failed to encode error response", "error", err)
-	}
+	base.ReplyErrorJSON(ctx, w, "UNKNOWN", http.StatusInternalServerError)
 }
 
 func (base *Base) ReplyErrorJSON(ctx context.Context, w http.ResponseWriter, errType string, httpCode int, msg ...string) {

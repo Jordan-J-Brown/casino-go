@@ -1,12 +1,17 @@
 package usermodels
 
-import "errors"
+type Error string
 
-var (
-	ErrUsernameExists  = errors.New("username exists")
-	ErrInvalidUsername = errors.New("invalid username")
-	ErrUsernameTaken   = errors.New("username is taken")
-	ErrInvalidBalance  = errors.New("invalid balance")
-	ErrUserNotFound    = errors.New("user not found")
-	ErrSessionExists   = errors.New("user session exists")
+func (err Error) Error() string {
+	return string(err)
+}
+
+const (
+	ErrUsernameExists  = Error("username exists")
+	ErrInvalidUsername = Error("invalid username")
+	ErrUsernameTaken   = Error("username is taken")
+	ErrInvalidBalance  = Error("invalid balance")
+	ErrUserNotFound    = Error("user not found")
+	ErrSessionExists   = Error("user session exists")
+	ErrBadArgs         = Error("bad arguments")
 )
