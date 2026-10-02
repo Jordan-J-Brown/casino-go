@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCasino_Two_Concurrent_Plays(t *testing.T) {
+func TestGameService_Two_Concurrent_Plays(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	t.Cleanup(cancel)
 
@@ -50,7 +50,7 @@ func TestCasino_Two_Concurrent_Plays(t *testing.T) {
 	}
 }
 
-func TestCasino_Two_Concurrent_Next_Actions(t *testing.T) {
+func TestGameService_Two_Concurrent_Next_Actions(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	t.Cleanup(cancel)
 
@@ -99,7 +99,7 @@ func TestCasino_Two_Concurrent_Next_Actions(t *testing.T) {
 	}
 }
 
-func TestCasino_Two_Concurrent_Close_Actions(t *testing.T) {
+func TestGameService_Two_Concurrent_Close_Actions(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	t.Cleanup(cancel)
 
