@@ -142,10 +142,6 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 			return errorx.New("failed to transfer bet", errorx.WithChildren(err))
 		}
 
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-
 		engineResponse, playErr := service.EngineClient.Play(ctx, request.EngineID, enginemsg.PlayRequest{
 			Bet:      request.Bet,
 			MetaData: request.MetaData,
@@ -170,7 +166,7 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 			PublicState:      game.PublicState,
 		}
 
-		return ctx.Err()
+		return nil
 	})
 	if storeErr != nil {
 		if errX, ok := storeErr.(*errorx.Error); ok {
