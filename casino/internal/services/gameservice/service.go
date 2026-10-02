@@ -202,6 +202,11 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 }
 
 func (service *service) Next(ctx context.Context, request NextRequest) (*RoundResult, *errorx.Error) {
+	if !service.gameLocker.tryLockGameForAction(actionNext, request.User.ID, request.EngineID) {
+		return nil, errorx.NewFromType(string(gamemodels.ErrTooManyRequests), errorx.WithCode(errorx.ClientError))
+	}
+	defer service.gameLocker.unlockGame(actionNext, request.User.ID, request.EngineID)
+
 	_, err := service.getEngineReg(ctx, request.EngineID)
 	if err != nil {
 		return nil, err
@@ -263,6 +268,11 @@ func (service *service) Next(ctx context.Context, request NextRequest) (*RoundRe
 }
 
 func (service *service) Close(ctx context.Context, request CloseRequest) (*CloseResult, *errorx.Error) {
+	if !service.gameLocker.tryLockGameForAction(actionClose, request.User.ID, request.EngineID) {
+		return nil, errorx.NewFromType(string(gamemodels.ErrTooManyRequests), errorx.WithCode(errorx.ClientError))
+	}
+	defer service.gameLocker.unlockGame(actionClose, request.User.ID, request.EngineID)
+
 	var result *CloseResult
 	transactErr := service.StoreProvider.UseStore(ctx, func(store CasinoGameStore) error {
 		game, err := store.LoadGame(ctx, request.User.ID, request.EngineID)
@@ -434,7 +444,7 @@ func (g *gameLocker) tryLockGameForAction(action gameAction, userID, engineID st
 	mu.Lock()
 	defer mu.Unlock()
 
-	key := userID + engineID
+	key := userID + ":" + engineID
 	_, exists := g.gameLocks[key]
 	if exists {
 		return false
@@ -450,7 +460,7 @@ func (g *gameLocker) unlockGame(action gameAction, userID, engineID string) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	key := userID + engineID
+	key := userID + ":" + engineID
 
 	delete(g.gameLocks, key)
 }

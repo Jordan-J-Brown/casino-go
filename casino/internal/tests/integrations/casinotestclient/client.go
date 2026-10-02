@@ -3,7 +3,9 @@ package casinotestclient
 import (
 	"bytes"
 	"encoding/json"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/responses"
@@ -40,8 +42,36 @@ func New(
 	}
 }
 
+func NewDefaultClient() *Client {
+	//Copies the defaults from stdlib
+
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+
+	return &Client{
+		baseURL: DefaultBaseURL,
+		hclient: &http.Client{
+			Transport: &http.Transport{
+				Proxy:                 http.ProxyFromEnvironment,
+				DialContext:           dialer.DialContext,
+				ForceAttemptHTTP2:     true,
+				MaxIdleConns:          100,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+			},
+		},
+	}
+}
+
 func (c *Client) Auth(r requests.Auth) (*Response[responses.Auth], error) {
 	return c.post[requests.Auth, responses.Auth](c.baseURL+"/auth", r)
+}
+
+func (c *Client) Balance(r requests.Balance) (*Response[responses.Balance], error) {
+	return c.post[requests.Balance, responses.Balance](c.baseURL+"/users/balance", r)
 }
 
 func (c *Client) Setup(r requests.Setup) (*Response[responses.Setup], error) {
