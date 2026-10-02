@@ -1,0 +1,8 @@
+package ternary
+
+func Eval[T any](condition bool, a, b T) T {
+	if condition {
+		return a
+	}
+	return b
+}

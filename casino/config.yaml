@@ -1,0 +1,21 @@
+env: local
+service_name: casino
+service_version: v0.0.0
+
+api:
+  port: 10000
+
+games:
+  bet_sizes: 10,20,50,100,200,500,1000,2000,5000,10000,25000,50000,100000
+  max_payout_multiplier: 100000
+
+nats:
+  url: nats://localhost:4222
+
+otel:
+  exporter_otlp_endpoint: http://localhost:4317
+  exporter_otlp_insecure: true
+
+logging:
+  type:  text   #text|json
+  level: debug  #debug|info|warn|error

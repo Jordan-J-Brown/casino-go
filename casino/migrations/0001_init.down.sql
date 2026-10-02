@@ -1,0 +1,9 @@
+DROP TABLE service.games;
+DROP TYPE game_status_type;
+DROP TABLE service.transactions;
+DROP TYPE transaction_type;
+DROP TABLE service.casino_wallets;
+DROP TABLE service.user_wallets;
+DROP TABLE service.wallets;
+DROP TABLE service.user_sessions;
+DROP TABLE service.users;
