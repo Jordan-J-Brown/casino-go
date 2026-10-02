@@ -1,4 +1,4 @@
-package tests
+package casino
 
 import (
 	"context"
