@@ -3,7 +3,6 @@ package casinostorepg
 import (
 	"context"
 	"time"
-	"uuid"
 
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/domain/walletmodels"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
@@ -30,100 +29,35 @@ func (s *Store) GetWallet(ctx context.Context, walletID string) (*walletmodels.W
 	return wallet, nil
 }
 
-func (s *Store) GetOrCreateCasinoWallet(ctx context.Context, walletID string, balance int64) (*walletmodels.Wallet, error) {
-	exists, err := s.CasinoWalletExists(ctx, walletID)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		wallet, err := s.GetWallet(ctx, walletID)
-		if err != nil {
-			return nil, err
-		}
-		return wallet, nil
-	}
-
-	return s.CreateCasinoWallet(ctx, walletID, balance)
-}
-
-func (s *Store) CasinoWalletExists(ctx context.Context, walletID string) (exists bool, err error) {
-	err = s.tx.QueryRow(
-		ctx, `SELECT EXISTS(SELECT 1 FROM service.casino_wallets WHERE wallet_id=$1);`, walletID,
-	).Scan(&exists)
-	if err != nil && err == pgx.ErrNoRows {
-		return false, nil
-	}
-
-	return
-}
-
-func (s *Store) CreateCasinoWallet(ctx context.Context, walletID string, balance int64) (*walletmodels.Wallet, error) {
-	err := s.createWalletWithBalance(ctx, walletID, balance)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = s.tx.Exec(ctx, `INSERT INTO service.casino_wallets (wallet_id) VALUES ($1);`, walletID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &walletmodels.Wallet{
-		ID:           walletID,
-		BalanceMinor: balance,
-	}, nil
-}
-
-func (s *Store) TransferFunds(
+func (store *Store) ApplyWalletTransaction(
 	ctx context.Context,
-	args walletmodels.TransferArgs,
-	transferFn func(src, dst *walletmodels.Wallet) error,
+	walletID string,
+	applyFn func(wallet *walletmodels.Wallet) (*walletmodels.Transaction, error),
 ) error {
-	srcWallet, err := s.getLockedWallet(ctx, args.SourceWalletID)
+	wallet, err := store.getLockedWallet(ctx, walletID)
 	if err != nil {
 		return err
 	}
-	if srcWallet == nil {
-		return walletmodels.ErrSourceWalletDoesNotExist
+	if wallet == nil {
+		return walletmodels.ErrWalletDoesNotExist
 	}
 
-	dstWallet, err := s.getLockedWallet(ctx, args.DestinationWalletID)
+	walletTransaction, err := applyFn(wallet)
 	if err != nil {
-		return err
+		return errorx.New("failed to apply wallet transaction", errorx.WithChildren(err))
 	}
-	if dstWallet == nil {
-		return walletmodels.ErrDestWalletDoesNotExist
+	if walletTransaction == nil {
+		return errorx.New("nil wallet transaction returned")
 	}
 
-	err = transferFn(srcWallet, dstWallet)
+	err = store.updateBalance(ctx, wallet)
 	if err != nil {
-		return err
-	}
-
-	if err = s.updateBalance(ctx, srcWallet); err != nil {
 		return errorx.New("failed to update source wallet balance", errorx.WithChildren(err))
 	}
-	if err = s.insertTransaction(ctx, walletmodels.Transaction{
-		ID:          uuid.New().String(),
-		Timestamp:   args.Timestamp,
-		Type:        walletmodels.TransactionTypeDebit,
-		WalletID:    srcWallet.ID,
-		AmountMinor: args.AmountMinor,
-	}); err != nil {
-		return errorx.New("failed to insert source wallet transaction", errorx.WithChildren(err))
-	}
 
-	if err = s.updateBalance(ctx, dstWallet); err != nil {
-		return errorx.New("failed to update desination wallet balance", errorx.WithChildren(err))
-	}
-	if err = s.insertTransaction(ctx, walletmodels.Transaction{
-		ID:          uuid.New().String(),
-		Timestamp:   args.Timestamp,
-		Type:        walletmodels.TransactionTypeCredit,
-		WalletID:    dstWallet.ID,
-		AmountMinor: args.AmountMinor,
-	}); err != nil {
-		return errorx.New("failed to insert destination wallet transaction", errorx.WithChildren(err))
+	err = store.insertTransaction(ctx, *walletTransaction)
+	if err != nil {
+		return errorx.New("failed to insert transaction", errorx.WithChildren(err))
 	}
 
 	return nil
