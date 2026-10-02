@@ -3,9 +3,8 @@ package walletmodels
 import "errors"
 
 var (
-	ErrInsufficientFunds        = errors.New("insufficient funds")
-	ErrInvalidAmount            = errors.New("invalid amount")
-	ErrSourceWalletDoesNotExist = errors.New("source wallet does not exist")
-	ErrDestWalletDoesNotExist   = errors.New("destination wallet does not exist")
-	ErrWalletExists             = errors.New("wallet already exists")
+	ErrInsufficientFunds  = errors.New("INSUFFICIENT_FUNDS")
+	ErrInvalidAmount      = errors.New("INVALID_AMOUNT")
+	ErrWalletDoesNotExist = errors.New("WALLET_DOES_NOT_EXIST")
+	ErrWalletExists       = errors.New("WALLET_EXISTS")
 )

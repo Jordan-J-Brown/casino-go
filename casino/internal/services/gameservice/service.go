@@ -32,33 +32,20 @@ type service struct {
 	EngineRegistry      engineregistry.Service
 	EngineClient        engineclient.Client
 	Logger              logsx.Logger
-	CasinoWalletID      string
 
 	gameLocker *gameLocker
 }
 
 type Config struct {
-	MaxPayoutMultiplier      int64
-	BetSizes                 []int64
-	StoreProvider            CasinoGameStoreProvider
-	EngineRegistry           engineregistry.Service
-	EngineClient             engineclient.Client
-	Logger                   logsx.Logger
-	CasinoWalletID           string
-	CasinoBalanceIfNotExists int64
+	MaxPayoutMultiplier int64
+	BetSizes            []int64
+	StoreProvider       CasinoGameStoreProvider
+	EngineRegistry      engineregistry.Service
+	EngineClient        engineclient.Client
+	Logger              logsx.Logger
 }
 
-func New(ctx context.Context, cfg Config) (Service, error) {
-	err := cfg.StoreProvider.UseStore(ctx, func(store CasinoGameStore) error {
-		_, err := store.GetOrCreateCasinoWallet(ctx, cfg.CasinoWalletID, cfg.CasinoBalanceIfNotExists)
-		return err
-	})
-	if err != nil {
-		return nil, errorx.New("failed to get or create casino wallet", errorx.WithChildren(err))
-	}
-
-	cfg.Logger.DebugContext(ctx, "Casino wallet ready")
-
+func New(ctx context.Context, cfg Config) Service {
 	return &service{
 		MaxPayoutMultiplier: cfg.MaxPayoutMultiplier,
 		BetSizes:            cfg.BetSizes,
@@ -66,10 +53,9 @@ func New(ctx context.Context, cfg Config) (Service, error) {
 		EngineRegistry:      cfg.EngineRegistry,
 		EngineClient:        cfg.EngineClient,
 		Logger:              cfg.Logger,
-		CasinoWalletID:      cfg.CasinoWalletID,
 
 		gameLocker: newGameLocker(),
-	}, nil
+	}
 }
 
 func (service *service) Setup(ctx context.Context, request SetupRequest) (*SetupResult, *errorx.Error) {
@@ -148,12 +134,7 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 			Status:   gamemodels.StatusPlaying,
 		}
 
-		srcBalance, _, err := service.transferFunds(ctx, store, walletmodels.TransferArgs{
-			SourceWalletID:      request.User.WalletID,
-			DestinationWalletID: service.CasinoWalletID,
-			AmountMinor:         request.Bet,
-			Timestamp:           time.Now(),
-		})
+		newBalance, err := service.debitFunds(ctx, store, request.User.WalletID, request.Bet)
 		if err != nil {
 			if err == walletmodels.ErrInsufficientFunds {
 				return errorx.NewFromType(string(gamemodels.ErrInsufficientFunds), errorx.WithCode(errorx.ClientError))
@@ -183,7 +164,7 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 		}
 
 		result = &RoundResult{
-			Balance:          srcBalance,
+			Balance:          newBalance,
 			Bet:              game.Bet,
 			PayoutMutliplier: service.getPublicStatePayoutMultiplier(game.PayoutMultiplier),
 			PublicState:      game.PublicState,
@@ -195,7 +176,7 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 		if errX, ok := storeErr.(*errorx.Error); ok {
 			return nil, errX
 		}
-		return nil, errorx.NewFromError(err)
+		return nil, errorx.NewFromError(storeErr)
 	}
 
 	return result, nil
@@ -304,16 +285,11 @@ func (service *service) Close(ctx context.Context, request CloseRequest) (*Close
 		var balance int64
 		payout := decimal.NewFromInt(game.Bet).Mul(payoutMultiplier).IntPart()
 		if payout > 0 {
-			_, dstBalance, err := service.transferFunds(ctx, store, walletmodels.TransferArgs{
-				SourceWalletID:      service.CasinoWalletID,
-				DestinationWalletID: request.User.WalletID,
-				AmountMinor:         payout,
-				Timestamp:           time.Now(),
-			})
+			newBalance, err := service.creditFunds(ctx, store, request.User.WalletID, payout)
 			if err != nil {
 				return err
 			}
-			balance = dstBalance
+			balance = newBalance
 		} else {
 			wallet, err := store.GetWallet(ctx, request.User.WalletID)
 			if err != nil {
@@ -353,22 +329,50 @@ func (service *service) capPayoutMultiplier(m decimal.Decimal) (mult decimal.Dec
 	return m, false
 }
 
-func (service *service) transferFunds(ctx context.Context, store CasinoGameStore, args walletmodels.TransferArgs) (srcBalance, dstBalance int64, err error) {
-	err = store.TransferFunds(ctx, args, func(src, dst *walletmodels.Wallet) error {
-		if err = src.Debit(args.AmountMinor); err != nil {
-			if err == walletmodels.ErrInsufficientFunds {
-				return err
-			}
-			return errorx.New("failed to debit source wallet", errorx.WithChildren(err))
+func (service *service) debitFunds(
+	ctx context.Context,
+	store CasinoGameStore,
+	walletID string,
+	amount int64,
+) (newBalance int64, err error) {
+	err = store.ApplyWalletTransaction(ctx, walletID, func(wallet *walletmodels.Wallet) (*walletmodels.Transaction, error) {
+		debitErr := wallet.Debit(amount)
+		if debitErr != nil {
+			return nil, err
 		}
-		srcBalance = src.BalanceMinor
+		newBalance = wallet.BalanceMinor
 
-		if err = dst.Credit(args.AmountMinor); err != nil {
-			return errorx.New("failed to credit destination wallet", errorx.WithChildren(err))
+		return &walletmodels.Transaction{
+			ID:          uuid.New().String(),
+			Timestamp:   time.Now(),
+			Type:        walletmodels.TransactionTypeDebit,
+			WalletID:    walletID,
+			AmountMinor: amount,
+		}, nil
+	})
+	return
+}
+
+func (service *service) creditFunds(
+	ctx context.Context,
+	store CasinoGameStore,
+	walletID string,
+	amount int64,
+) (newBalance int64, err error) {
+	err = store.ApplyWalletTransaction(ctx, walletID, func(wallet *walletmodels.Wallet) (*walletmodels.Transaction, error) {
+		debitErr := wallet.Credit(amount)
+		if debitErr != nil {
+			return nil, err
 		}
-		dstBalance = dst.BalanceMinor
+		newBalance = wallet.BalanceMinor
 
-		return nil
+		return &walletmodels.Transaction{
+			ID:          uuid.New().String(),
+			Timestamp:   time.Now(),
+			Type:        walletmodels.TransactionTypeCredit,
+			WalletID:    walletID,
+			AmountMinor: amount,
+		}, nil
 	})
 	return
 }

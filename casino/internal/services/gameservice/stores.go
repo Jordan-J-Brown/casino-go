@@ -17,6 +17,9 @@ type CasinoGameStore interface {
 	SaveGame(ctx context.Context, game *gamemodels.Game) error
 
 	GetWallet(ctx context.Context, walletID string) (*walletmodels.Wallet, error)
-	GetOrCreateCasinoWallet(ctx context.Context, walletID string, balance int64) (*walletmodels.Wallet, error)
-	TransferFunds(ctx context.Context, args walletmodels.TransferArgs, transferFn func(src, dst *walletmodels.Wallet) error) error
+	ApplyWalletTransaction(
+		ctx context.Context,
+		walletID string,
+		applyFn func(wallet *walletmodels.Wallet) (*walletmodels.Transaction, error),
+	) error
 }

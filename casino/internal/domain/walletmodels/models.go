@@ -43,13 +43,6 @@ func (w *Wallet) Clone() *Wallet {
 	return clone
 }
 
-type TransferArgs struct {
-	SourceWalletID      string
-	DestinationWalletID string
-	AmountMinor         int64
-	Timestamp           time.Time
-}
-
 type TransactionType string
 
 const (

@@ -23,6 +23,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+//TODO: These are more E2E tests. Refactor them into the gameservice package as integration tests.
+//
+// They should still use a real postgres DB, but just construct the gameservice on its own. This
+// will give us code coverage and more flexibility to test the game service.
+
 func TestCasino_Two_Concurrent_Plays(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	t.Cleanup(cancel)

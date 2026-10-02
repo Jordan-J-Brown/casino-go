@@ -27,10 +27,6 @@ CREATE TABLE IF NOT EXISTS service.user_wallets (
   wallet_id uuid REFERENCES service.wallets ON DELETE RESTRICT
 );
 
-CREATE TABLE IF NOT EXISTS service.casino_wallets (
-  wallet_id uuid REFERENCES service.wallets ON DELETE RESTRICT
-);
-
 CREATE TYPE transaction_type AS ENUM ('DEBIT', 'CREDIT');
 
 CREATE TABLE IF NOT EXISTS service.transactions (

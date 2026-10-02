@@ -19,17 +19,6 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/pkg/service"
 )
 
-// TODO:
-// Maybe we should just avoid using casino wallets altogether, and treat them more like IOUs.
-// We would just credit the user's wallet rather than transferring between wallets.
-// The user would then want to withdraw the funds via a payment service, which would then take the money from the casino's bank account.
-//
-// Lets finish the refactor though before taking this on.
-const (
-	casinoWalletID       string = "9dea2723-e907-4995-a0dd-e0f6ca00fcb7"
-	casinoDefaultBalance int64  = 1000000_00
-)
-
 type Application struct {
 	*service.BaseApplication
 	config   *config.Config
@@ -55,26 +44,21 @@ func (app *Application) initServices(ctx context.Context) error {
 	engineRegistry := engineregistry.New(ctx, app.Logger, engineregstore.New())
 	app.Services.EngineRegistry = engineRegistry
 
-	app.Services.GameService, err = gameservice.New(ctx, gameservice.Config{
+	app.Services.GameService = gameservice.New(ctx, gameservice.Config{
 		MaxPayoutMultiplier: app.config.Games.MaxPayoutMultiplier,
 		EngineRegistry:      engineRegistry,
 		EngineClient:        engineclient.New(app.NatsConn, app.Tracer, app.config.Engines.ClientTimeoutSeconds),
 		BetSizes:            app.config.Games.BetSizes,
-		StoreProvider: &casinostorepg.StoreProvider[gameservice.CasinoGameStore]{
+		StoreProvider: &casinostorepg.CasinoGameStoreProvider{
 			Pool:   pgPool,
 			Logger: app.Logger,
 		},
-		Logger:                   app.Logger,
-		CasinoWalletID:           casinoWalletID,
-		CasinoBalanceIfNotExists: casinoDefaultBalance,
+		Logger: app.Logger,
 	})
-	if err != nil {
-		return err
-	}
 
 	app.Services.UserService = userservice.New(userservice.Config{
 		SessionTTL: app.config.Auth.SessionTTL,
-		StoreProvider: &casinostorepg.StoreProvider[userservice.Store]{
+		StoreProvider: &casinostorepg.UserStoreProvider{
 			Pool:   pgPool,
 			Logger: app.Logger,
 		},
