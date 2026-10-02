@@ -63,6 +63,25 @@ func (s *service) GetUserFromSessionID(ctx context.Context, sessionID string) (u
 	return
 }
 
+func (s *service) GetUserBalance(ctx context.Context, user *usermodels.User) (balance int64, err *errorx.Error) {
+	if user == nil || user.ID == "" || user.WalletID == "" {
+		return 0, errorx.NewFromType(usermodels.ErrBadArgs.Error(), errorx.WithCode(errorx.ClientError))
+	}
+
+	storeErr := s.StoreProvider.UseStore(ctx, func(store Store) error {
+		wallet, err := store.GetWallet(ctx, user.WalletID)
+		if err != nil {
+			return err
+		}
+
+		balance = wallet.BalanceMinor
+
+		return nil
+	})
+	if storeErr != nil {
+		return 0, errorx.NewFromError(storeErr)
+	}
+
 	return
 }
 

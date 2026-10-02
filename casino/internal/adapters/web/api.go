@@ -9,6 +9,7 @@ import (
 
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web/handlers/authhandler"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web/handlers/gamehandler"
+	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web/handlers/userhandler"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web/middleware"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/gameservice"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/userservice"
@@ -45,16 +46,9 @@ func RunApiAsync(ctx context.Context, cfg ApiConfig) (shutdownFn func(ctx contex
 		chimiddleware.Timeout(10*time.Second),
 	)
 
-	authHandler := authhandler.New(
-		cfg.Logger,
-		cfg.Tracer,
-		cfg.UserService,
-	)
-	gameHandler := gamehandler.New(
-		cfg.Logger,
-		cfg.Tracer,
-		cfg.GameService,
-	)
+	authHandler := authhandler.New(cfg.Logger, cfg.Tracer, cfg.UserService)
+	gameHandler := gamehandler.New(cfg.Logger, cfg.Tracer, cfg.GameService)
+	userHandler := userhandler.New(cfg.Logger, cfg.Tracer, cfg.UserService)
 
 	router.Route("/api/v1", func(r chi.Router) {
 		r.Head("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -70,6 +64,12 @@ func RunApiAsync(ctx context.Context, cfg ApiConfig) (shutdownFn func(ctx contex
 			r.Post("/play", gameHandler.Play)
 			r.Post("/next", gameHandler.Next)
 			r.Post("/close", gameHandler.Close)
+		})
+
+		r.Route("/users", func(r chi.Router) {
+			r.Use(authHandler.Middleware)
+
+			r.Post("/balance", userHandler.Balance)
 		})
 	})
 
