@@ -1,0 +1,506 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "HTTP API for casino games and player accounts.",
+        "title": "Casino API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/api/v1",
+    "paths": {
+        "/auth": {
+            "post": {
+                "description": "Creates a player with an initial balance and returns a session ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Create a session",
+                "operationId": "authenticate",
+                "parameters": [
+                    {
+                        "description": "Player credentials and initial balance",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.Auth"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Auth"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/close": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Games"
+                ],
+                "summary": "Close a game",
+                "operationId": "gameClose",
+                "parameters": [
+                    {
+                        "description": "Session and game identifier",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.Close"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Close"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/next": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Games"
+                ],
+                "summary": "Advance a game",
+                "operationId": "gameNext",
+                "parameters": [
+                    {
+                        "description": "Session, game identifier, and game data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.Next"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Round"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/play": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Games"
+                ],
+                "summary": "Play a game",
+                "operationId": "gamePlay",
+                "parameters": [
+                    {
+                        "description": "Session, game identifier, bet, and game data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.Play"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Round"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/setup": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Games"
+                ],
+                "summary": "Set up a game",
+                "operationId": "gameSetup",
+                "parameters": [
+                    {
+                        "description": "Session and game identifier",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.Setup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Setup"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "head": {
+                "description": "Returns no content when the API is running.",
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Check API health",
+                "operationId": "health",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/users/balance": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get player balance",
+                "operationId": "userBalance",
+                "parameters": [
+                    {
+                        "description": "Session identifier",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.Balance"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Balance"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/responses.Error"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "requests.Auth": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.Balance": {
+            "type": "object",
+            "properties": {
+                "sessionID": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.Close": {
+            "type": "object",
+            "properties": {
+                "gameID": {
+                    "type": "string"
+                },
+                "sessionID": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.Next": {
+            "type": "object",
+            "properties": {
+                "gameData": {
+                    "type": "string",
+                    "format": "json"
+                },
+                "gameID": {
+                    "type": "string"
+                },
+                "sessionID": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.Play": {
+            "type": "object",
+            "properties": {
+                "bet": {
+                    "type": "integer"
+                },
+                "gameData": {
+                    "type": "string",
+                    "format": "json"
+                },
+                "gameID": {
+                    "type": "string"
+                },
+                "sessionID": {
+                    "type": "string"
+                }
+            }
+        },
+        "requests.Setup": {
+            "type": "object",
+            "properties": {
+                "gameID": {
+                    "type": "string"
+                },
+                "metaData": {
+                    "type": "string",
+                    "format": "json"
+                },
+                "sessionID": {
+                    "type": "string"
+                }
+            }
+        },
+        "responses.Auth": {
+            "type": "object",
+            "properties": {
+                "sessionID": {
+                    "type": "string"
+                }
+            }
+        },
+        "responses.Balance": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                }
+            }
+        },
+        "responses.Close": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                }
+            }
+        },
+        "responses.Error": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "responses.Round": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                },
+                "bet": {
+                    "type": "integer"
+                },
+                "payoutMultiplier": {
+                    "type": "string"
+                },
+                "roundData": {
+                    "type": "string",
+                    "format": "json"
+                }
+            }
+        },
+        "responses.Setup": {
+            "type": "object",
+            "properties": {
+                "bets": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "gameConfig": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "metaData": {
+                    "type": "string",
+                    "format": "json"
+                },
+                "roundData": {
+                    "type": "string",
+                    "format": "json"
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Health"
+        },
+        {
+            "name": "Authentication"
+        },
+        {
+            "name": "Games"
+        },
+        {
+            "name": "Users"
+        }
+    ]
+}

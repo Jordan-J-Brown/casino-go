@@ -13,15 +13,27 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web/middleware"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/gameservice"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/userservice"
+	"github.com/Jordan-J-Brown/casino-go/pkg/config"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"go.opentelemetry.io/otel/trace"
+	_ "github.com/Jordan-J-Brown/casino-go/casino/docs"
 )
 
-//TODO: setup swagger
+// @title Casino API
+// @version 1.0
+// @description HTTP API for casino games and player accounts.
+// @BasePath /api/v1
+// @tag.name Health
+// @tag.name Authentication
+// @tag.name Games
+// @tag.name Users
+//
 
 type ApiConfig struct {
+	Env         config.Env
 	Port        string
 	Logger      logsx.Logger
 	Tracer      trace.Tracer
@@ -46,14 +58,16 @@ func RunApiAsync(ctx context.Context, cfg ApiConfig) (shutdownFn func(ctx contex
 		chimiddleware.Timeout(10*time.Second),
 	)
 
+	if !cfg.Env.IsProd() {
+		router.Get("/swagger/*", httpSwagger.WrapHandler)
+	}
+
 	authHandler := authhandler.New(cfg.Logger, cfg.Tracer, cfg.UserService)
 	gameHandler := gamehandler.New(cfg.Logger, cfg.Tracer, cfg.GameService)
 	userHandler := userhandler.New(cfg.Logger, cfg.Tracer, cfg.UserService)
 
 	router.Route("/api/v1", func(r chi.Router) {
-		r.Head("/health", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNoContent)
-		})
+		r.Head("/health", health)
 
 		r.Post("/auth", authHandler.Authenticate)
 
@@ -92,6 +106,17 @@ func RunApiAsync(ctx context.Context, cfg ApiConfig) (shutdownFn func(ctx contex
 	}(cfg.Logger)
 
 	return server.Shutdown
+}
+
+// Health reports that the API process is alive.
+// @Tags Health
+// @Summary Check API health
+// @Description Returns no content when the API is running.
+// @ID health
+// @Success 204
+// @Router /health [head]
+func health(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func panicOnZero(value any, msg string) {

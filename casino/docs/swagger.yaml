@@ -1,0 +1,328 @@
+basePath: /api/v1
+definitions:
+  requests.Auth:
+    properties:
+      balance:
+        type: integer
+      username:
+        type: string
+    type: object
+  requests.Balance:
+    properties:
+      sessionID:
+        type: string
+    type: object
+  requests.Close:
+    properties:
+      gameID:
+        type: string
+      sessionID:
+        type: string
+    type: object
+  requests.Next:
+    properties:
+      gameData:
+        format: json
+        type: string
+      gameID:
+        type: string
+      sessionID:
+        type: string
+    type: object
+  requests.Play:
+    properties:
+      bet:
+        type: integer
+      gameData:
+        format: json
+        type: string
+      gameID:
+        type: string
+      sessionID:
+        type: string
+    type: object
+  requests.Setup:
+    properties:
+      gameID:
+        type: string
+      metaData:
+        format: json
+        type: string
+      sessionID:
+        type: string
+    type: object
+  responses.Auth:
+    properties:
+      sessionID:
+        type: string
+    type: object
+  responses.Balance:
+    properties:
+      balance:
+        type: integer
+    type: object
+  responses.Close:
+    properties:
+      balance:
+        type: integer
+    type: object
+  responses.Error:
+    properties:
+      message:
+        type: string
+      type:
+        type: string
+    type: object
+  responses.Round:
+    properties:
+      balance:
+        type: integer
+      bet:
+        type: integer
+      payoutMultiplier:
+        type: string
+      roundData:
+        format: json
+        type: string
+    type: object
+  responses.Setup:
+    properties:
+      bets:
+        items:
+          type: integer
+        type: array
+      gameConfig:
+        items:
+          type: integer
+        type: array
+      metaData:
+        format: json
+        type: string
+      roundData:
+        format: json
+        type: string
+    type: object
+info:
+  contact: {}
+  description: HTTP API for casino games and player accounts.
+  title: Casino API
+  version: "1.0"
+paths:
+  /auth:
+    post:
+      consumes:
+      - application/json
+      description: Creates a player with an initial balance and returns a session
+        ID.
+      operationId: authenticate
+      parameters:
+      - description: Player credentials and initial balance
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.Auth'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responses.Auth'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.Error'
+      summary: Create a session
+      tags:
+      - Authentication
+  /games/close:
+    post:
+      consumes:
+      - application/json
+      operationId: gameClose
+      parameters:
+      - description: Session and game identifier
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.Close'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responses.Close'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.Error'
+      summary: Close a game
+      tags:
+      - Games
+  /games/next:
+    post:
+      consumes:
+      - application/json
+      operationId: gameNext
+      parameters:
+      - description: Session, game identifier, and game data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.Next'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responses.Round'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.Error'
+      summary: Advance a game
+      tags:
+      - Games
+  /games/play:
+    post:
+      consumes:
+      - application/json
+      operationId: gamePlay
+      parameters:
+      - description: Session, game identifier, bet, and game data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.Play'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responses.Round'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.Error'
+      summary: Play a game
+      tags:
+      - Games
+  /games/setup:
+    post:
+      consumes:
+      - application/json
+      operationId: gameSetup
+      parameters:
+      - description: Session and game identifier
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.Setup'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responses.Setup'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.Error'
+      summary: Set up a game
+      tags:
+      - Games
+  /health:
+    head:
+      description: Returns no content when the API is running.
+      operationId: health
+      responses:
+        "204":
+          description: No Content
+      summary: Check API health
+      tags:
+      - Health
+  /users/balance:
+    post:
+      consumes:
+      - application/json
+      operationId: userBalance
+      parameters:
+      - description: Session identifier
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/requests.Balance'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responses.Balance'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.Error'
+      summary: Get player balance
+      tags:
+      - Users
+swagger: "2.0"
+tags:
+- name: Health
+- name: Authentication
+- name: Games
+- name: Users

@@ -36,11 +36,23 @@ func New(
 //TODO: add real auth handling
 
 // Demo auth handling, should just end up creating a new user+wallet with the balance and returning a session ID that links to the new user.
+// Authenticate creates a player and returns a session identifier.
+// @Tags Authentication
+// @Summary Create a session
+// @Description Creates a player with an initial balance and returns a session ID.
+// @ID authenticate
+// @Accept json
+// @Produce json
+// @Param request body requests.Auth true "Player credentials and initial balance"
+// @Success 200 {object} responses.Auth
+// @Failure 400 {object} responses.Error
+// @Failure 500 {object} responses.Error
+// @Router /auth [post]
 func (h *Handler) Authenticate(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.Tracer.Start(r.Context(), "casino-auth")
 	defer span.End()
 
-	request, decodeErr := h.Base.DecodeJSON[requests.Auth](r.Body)
+	request, decodeErr := basehandler.DecodeJSON[requests.Auth](r.Body)
 	if decodeErr != nil {
 		http.Error(w, "failed to unmarshal request data", http.StatusBadRequest)
 		return

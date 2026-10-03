@@ -29,11 +29,23 @@ func New(
 	}
 }
 
+// Setup returns game configuration and initial round state.
+// @Tags Games
+// @Summary Set up a game
+// @ID gameSetup
+// @Accept json
+// @Produce json
+// @Param request body requests.Setup true "Session and game identifier"
+// @Success 200 {object} responses.Setup
+// @Failure 400 {object} responses.Error
+// @Failure 401 {object} responses.Error
+// @Failure 500 {object} responses.Error
+// @Router /games/setup [post]
 func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.Tracer.Start(r.Context(), "casino-game-setup")
 	defer span.End()
 
-	request, err := h.DecodeJSON[requests.Setup](r.Body)
+	request, err := basehandler.DecodeJSON[requests.Setup](r.Body)
 	if err != nil {
 		h.Logger.ErrorContext(ctx, "failed to decode setup request", "error", err)
 		h.HandleError(ctx, w, err)
@@ -60,11 +72,23 @@ func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Play starts a game round.
+// @Tags Games
+// @Summary Play a game
+// @ID gamePlay
+// @Accept json
+// @Produce json
+// @Param request body requests.Play true "Session, game identifier, bet, and game data"
+// @Success 200 {object} responses.Round
+// @Failure 400 {object} responses.Error
+// @Failure 401 {object} responses.Error
+// @Failure 500 {object} responses.Error
+// @Router /games/play [post]
 func (h *Handler) Play(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.Tracer.Start(r.Context(), "casino-game-play")
 	defer span.End()
 
-	request, err := h.DecodeJSON[requests.Play](r.Body)
+	request, err := basehandler.DecodeJSON[requests.Play](r.Body)
 	if err != nil {
 		h.Logger.ErrorContext(ctx, "failed to decode play request", "error", err)
 		h.HandleError(ctx, w, err)
@@ -93,11 +117,23 @@ func (h *Handler) Play(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Next advances the current game round.
+// @Tags Games
+// @Summary Advance a game
+// @ID gameNext
+// @Accept json
+// @Produce json
+// @Param request body requests.Next true "Session, game identifier, and game data"
+// @Success 200 {object} responses.Round
+// @Failure 400 {object} responses.Error
+// @Failure 401 {object} responses.Error
+// @Failure 500 {object} responses.Error
+// @Router /games/next [post]
 func (h *Handler) Next(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.Tracer.Start(r.Context(), "casino-game-next")
 	defer span.End()
 
-	request, err := h.DecodeJSON[requests.Next](r.Body)
+	request, err := basehandler.DecodeJSON[requests.Next](r.Body)
 	if err != nil {
 		h.Logger.ErrorContext(ctx, "failed to decode next request", "error", err)
 		h.HandleError(ctx, w, err)
@@ -125,11 +161,23 @@ func (h *Handler) Next(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Close ends the current game session.
+// @Tags Games
+// @Summary Close a game
+// @ID gameClose
+// @Accept json
+// @Produce json
+// @Param request body requests.Close true "Session and game identifier"
+// @Success 200 {object} responses.Close
+// @Failure 400 {object} responses.Error
+// @Failure 401 {object} responses.Error
+// @Failure 500 {object} responses.Error
+// @Router /games/close [post]
 func (h *Handler) Close(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.Tracer.Start(r.Context(), "casino-game-close")
 	defer span.End()
 
-	request, err := h.DecodeJSON[requests.Close](r.Body)
+	request, err := basehandler.DecodeJSON[requests.Close](r.Body)
 	if err != nil {
 		h.Logger.ErrorContext(ctx, "failed to decode close request", "error", err)
 		h.HandleError(ctx, w, err)

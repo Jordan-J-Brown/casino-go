@@ -28,6 +28,18 @@ func New(
 	}
 }
 
+// Balance returns the authenticated player's wallet balance.
+// @Tags Users
+// @Summary Get player balance
+// @ID userBalance
+// @Accept json
+// @Produce json
+// @Param request body requests.Balance true "Session identifier"
+// @Success 200 {object} responses.Balance
+// @Failure 400 {object} responses.Error
+// @Failure 401 {object} responses.Error
+// @Failure 500 {object} responses.Error
+// @Router /users/balance [post]
 func (handler *Handler) Balance(w http.ResponseWriter, r *http.Request) {
 	ctx, span := handler.Tracer.Start(r.Context(), "casino-users-balance")
 	defer span.End()

@@ -21,7 +21,7 @@ func (base *Base) SetJsonContentType(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 }
 
-func (base *Base) DecodeJSON[T any](r io.Reader) (*T, error) {
+func DecodeJSON[T any](r io.Reader) (*T, error) {
 	value := new(T)
 	err := json.NewDecoder(r).Decode(value)
 	return value, err

@@ -29,6 +29,13 @@ build:
 pprof-cpu:
 	@go tool pprof -http : http://localhost:6060/debug/pprof/profile?seconds=15
 
+# Generates swagger docs from godoc comments using the swag-go tool
+swag-init:
+	swag init \
+		--parseInternal \
+		--parseDependency \
+		--dir ./internal/adapters/web,pkg
+
 # --- Testing ---
 test:
 	@go test -tags !integrations ./...
