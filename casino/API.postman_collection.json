@@ -1,0 +1,326 @@
+{
+  "info": {
+    "_postman_id": "",
+    "name": "Casino API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": ""
+  },
+  "item": [
+    {
+      "name": "Games",
+      "item": [
+        {
+          "name": "Mines",
+          "item": [
+            {
+              "name": "Setup",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"sessionID\": \"{{SESSION_ID}}\",\n    \"gameID\": \"{{GAME_ID}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/games/setup",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "games",
+                    "setup"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Play",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"sessionID\": \"{{SESSION_ID}}\",\n    \"gameID\": \"{{GAME_ID}}\",\n    \"bet\": {{BET}},\n    \"gameData\": {\n        \"mines\": {{MINES}}\n    }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/games/play",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "games",
+                    "play"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Next - Pick",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"sessionID\": \"{{SESSION_ID}}\",\n    \"gameID\": \"{{GAME_ID}}\",\n    \"gameData\": {\n        \"index\": {{INDEX}}\n    }\n}\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/games/next",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "games",
+                    "next"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Next - Cashout",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"sessionID\": \"{{SESSION_ID}}\",\n    \"gameID\": \"{{GAME_ID}}\",\n    \"gameData\": {\n        \"cashout\": true\n    }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/games/next",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "games",
+                    "next"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Close",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"sessionID\": \"{{SESSION_ID}}\",\n    \"gameID\": \"{{GAME_ID}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/games/close",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "games",
+                    "close"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Balance",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"sessionID\": \"{{SESSION_ID}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/users/balance",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "users",
+                "balance"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth - New User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const response = pm.response.json();",
+              "console.log(response);",
+              "pm.collectionVariables.set(\"SESSION_ID\", response?.sessionID);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.collectionVariables.set(\"USERNAME\", `player-${(Math.random()*1e12).toFixed(0)}`);"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"username\": \"{{USERNAME}}\",\n    \"balance\": {{BALANCE}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{BASE_URL}}/auth",
+          "host": [
+            "{{BASE_URL}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"username\": \"{{USERNAME}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{BASE_URL}}/auth",
+          "host": [
+            "{{BASE_URL}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "USERNAME",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "BALANCE",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "SESSION_ID",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "GAME_ID",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "BET",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "INDEX",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "MINES",
+      "value": "",
+      "type": "default"
+    }
+  ]
+}
