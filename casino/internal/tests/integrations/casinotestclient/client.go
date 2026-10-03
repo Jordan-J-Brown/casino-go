@@ -3,6 +3,7 @@ package casinotestclient
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -74,6 +75,17 @@ func (c *Client) Balance(r requests.Balance) (*Response[responses.Balance], erro
 	return c.post[requests.Balance, responses.Balance](c.baseURL+"/users/balance", r)
 }
 
+func (c *Client) MustGetBalance(r requests.Balance) *Response[responses.Balance] {
+	res, err := c.Balance(r)
+	if err != nil {
+		panic(err)
+	}
+	if res.IsError {
+		panic(fmt.Sprint("error response:", res.Error))
+	}
+	return res
+}
+
 func (c *Client) Setup(r requests.Setup) (*Response[responses.Setup], error) {
 	return c.post[requests.Setup, responses.Setup](c.baseURL+"/games/setup", r)
 }
@@ -82,12 +94,47 @@ func (c *Client) Play(r requests.Play) (*Response[responses.Round], error) {
 	return c.post[requests.Play, responses.Round](c.baseURL+"/games/play", r)
 }
 
+func (c *Client) MustPlay(r requests.Play) *Response[responses.Round] {
+	res, err := c.Play(r)
+	if err != nil {
+		panic(err)
+	}
+	if res.IsError {
+		panic(fmt.Sprint("error response:", res.Error))
+	}
+	return res
+}
+
 func (c *Client) Next(r requests.Next) (*Response[responses.Round], error) {
 	return c.post[requests.Next, responses.Round](c.baseURL+"/games/next", r)
 }
 
+func (c *Client) MustNext(r requests.Next) *Response[responses.Round] {
+	res, err := c.Next(r)
+	if err != nil {
+		panic(err)
+	}
+	if res.IsError {
+		panic(fmt.Sprint("error response:", res.Error))
+	}
+
+	return res
+}
+
 func (c *Client) Close(r requests.Close) (*Response[responses.Close], error) {
 	return c.post[requests.Close, responses.Close](c.baseURL+"/games/close", r)
+}
+
+func (c *Client) MustClose(r requests.Close) *Response[responses.Close] {
+	res, err := c.Close(r)
+	if err != nil {
+		panic(err)
+	}
+	if res.IsError {
+		panic(fmt.Sprint("error response:", res.Error))
+	}
+
+	return res
 }
 
 type Response[R any] struct {

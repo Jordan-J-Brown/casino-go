@@ -124,7 +124,7 @@ func (s *Store) CreateSessionForUser(
 
 	_, err = s.tx.Exec(ctx, `
 		INSERT INTO 
-			user_sessions (session_id, user_id, expires_at)
+			service.user_sessions (session_id, user_id, expires_at)
 		VALUES
 			($1, $2, $3)
 		;`,

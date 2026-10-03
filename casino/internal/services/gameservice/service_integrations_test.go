@@ -4,25 +4,24 @@ import (
 	"context"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/domain/gamemodels"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/tests/integrations/casinotestclient"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/tests/integrations/mockengine"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
 	"github.com/Jordan-J-Brown/casino-go/pkg/chans"
+	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
+	"github.com/Jordan-J-Brown/casino-go/pkg/msg/enginemsg"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGameService_Two_Concurrent_Plays(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	t.Cleanup(cancel)
+//TODO: The tests are failing when they are run together. Possibly due to them relying on an external NATS server in docker.
+// We probably need to add some steps to the bootstrapping to compose the platform.
 
-	env, err := setup(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(env.Shutdown)
+func TestGameService_Two_Concurrent_Plays(t *testing.T) {
+	ctx := t.Context()
+	env := setupEnv(ctx, t)
 
 	wg := new(sync.WaitGroup)
 	errChan := make(chan error, 2)
@@ -46,19 +45,13 @@ func TestGameService_Two_Concurrent_Plays(t *testing.T) {
 
 	errStr := errs[0].Error()
 	if errStr != string(gamemodels.ErrTooManyRequests) && errStr != string(gamemodels.ErrGameInProgress) {
-		t.Error("unexpected error type returned:", err)
+		t.Error("unexpected error type returned:", errStr)
 	}
 }
 
 func TestGameService_Two_Concurrent_Next_Actions(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	t.Cleanup(cancel)
-
-	env, err := setup(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(env.Shutdown)
+	ctx := t.Context()
+	env := setupEnv(ctx, t)
 
 	res, err := casinotestclient.DefaultClient.Play(requests.Play{
 		SessionID: env.SessionID,
@@ -100,14 +93,8 @@ func TestGameService_Two_Concurrent_Next_Actions(t *testing.T) {
 }
 
 func TestGameService_Two_Concurrent_Close_Actions(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	t.Cleanup(cancel)
-
-	env, err := setup(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(env.Shutdown)
+	ctx := t.Context()
+	env := setupEnv(ctx, t)
 
 	res, err := casinotestclient.DefaultClient.Play(requests.Play{
 		SessionID: env.SessionID,
@@ -136,15 +123,9 @@ func TestGameService_Two_Concurrent_Close_Actions(t *testing.T) {
 	}
 	wg.Wait()
 
-	balanceRes, err := casinotestclient.DefaultClient.Balance(requests.Balance{
+	balanceRes := casinotestclient.DefaultClient.MustGetBalance(requests.Balance{
 		SessionID: env.SessionID,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if balanceRes.IsError {
-		t.Fatal(balanceRes.Error.Error())
-	}
 	if !assert.Equal(t, int64(1000), balanceRes.Result.Balance) {
 		return
 	}

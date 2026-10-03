@@ -30,20 +30,22 @@ type Engine struct {
 }
 
 type Config struct {
-	Logging      config.Logging
-	ServerConfig enginemsg.ServerConfig
+	NatsConnString string
+	OtlpEndpoint   string
+	Logging        config.Logging
+	ServerConfig   enginemsg.ServerConfig
 }
 
 // Starts a mock engine using the provided config.
 //
 // [Engine.Shutdown] MUST be called upon completion of tests.
-func Start(ctx context.Context, t *testing.T, cfg Config) (*Engine, error) {
+func Start(ctx context.Context, cfg Config) (*Engine, error) {
 	cfg.ServerConfig.EngineID = EngineID
 
 	otelShutdown, err := telemetry.SetupOtelSDK(ctx, telemetry.OtelConfig{
 		ServiceName:          EngineID,
 		ServiceVersion:       "v0.0.0",
-		ExporterOtlpEndpoint: "http://localhost:4317",
+		ExporterOtlpEndpoint: cfg.OtlpEndpoint,
 		ExporterOtlpInsecure: true,
 	})
 	if err != nil {
@@ -59,7 +61,7 @@ func Start(ctx context.Context, t *testing.T, cfg Config) (*Engine, error) {
 		},
 	})
 
-	nc, err := nats.Connect(nats.DefaultURL)
+	nc, err := nats.Connect(cfg.NatsConnString)
 	if err != nil {
 		return nil, err
 	}

@@ -21,58 +21,65 @@ import (
 
 type environment struct {
 	*integrations.Environment
-	Engine    *mockengine.Engine
-	SessionID string
-	Username  string
+	Engine          *mockengine.Engine
+	SessionID       string
+	Username        string
+	OriginalBalance int64
 }
 
 func (env *environment) Shutdown() {
-	env.CasinoApp.Shutdown()
 	env.Engine.Shutdown()
+	env.CasinoApp.Shutdown()
 }
 
-func setup(ctx context.Context, t *testing.T) (*environment, error) {
-	env, err := integrations.Bootstrap(ctx, integrations.SetupConfig{
+func setupEnv(ctx context.Context, t *testing.T, engineConfig ...enginemsg.ServerConfig) *environment {
+	errorx.OutputStack = true
+
+	baseEnv, err := integrations.Bootstrap(ctx, t, integrations.SetupConfig{
 		T:            t,
 		CasinoConfig: integrations.DefaultCasinoConfig(),
 	})
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	engine, err := setupEngine(ctx, t)
+	engine, err := setupEngine(ctx, baseEnv.NatsConnString, baseEnv.OtelExporterEndpoint, engineConfig...)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	username := "player-" + rand.Text()[:8]
 
+	balance := int64(1000)
 	authResp, err := casinotestclient.DefaultClient.Auth(requests.Auth{
 		Username: username,
-		Balance:  1000,
+		Balance:  balance,
 	})
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	if authResp.IsError {
-		return nil, &authResp.Error
+		panic(authResp.Error)
 	}
 
-	return &environment{
-		Environment: env,
-		Engine:      engine,
-		SessionID:   authResp.Result.SessionID,
-		Username:    username,
-	}, nil
+	env := &environment{
+		Environment:     baseEnv,
+		Engine:          engine,
+		SessionID:       authResp.Result.SessionID,
+		Username:        username,
+		OriginalBalance: balance,
+	}
+	t.Cleanup(env.Shutdown)
+
+	return env
 }
 
-func setupEngine(ctx context.Context, t *testing.T) (*mockengine.Engine, error) {
-	return mockengine.Start(ctx, t, mockengine.Config{
-		Logging: config.Logging{
-			Type:  logsx.LoggerTypeText,
-			Level: slog.LevelDebug,
-		},
-		ServerConfig: enginemsg.ServerConfig{
+func setupEngine(ctx context.Context, natsConnString, otlpEndpoint string, serverConfig ...enginemsg.ServerConfig) (*mockengine.Engine, error) {
+	var srvConfig enginemsg.ServerConfig
+	if len(serverConfig) == 1 {
+		srvConfig = serverConfig[0]
+	} else {
+		srvConfig = enginemsg.ServerConfig{
 			RegisterFunc: func(ctx context.Context) (*enginemsg.EngineRegistration, error) {
 				return &enginemsg.EngineRegistration{
 					MinBet: 10,
@@ -106,7 +113,17 @@ func setupEngine(ctx context.Context, t *testing.T) (*mockengine.Engine, error) 
 					CanClose: true,
 				}, nil
 			},
+		}
+	}
+
+	return mockengine.Start(ctx, mockengine.Config{
+		Logging: config.Logging{
+			Type:  logsx.LoggerTypeText,
+			Level: slog.LevelDebug,
 		},
+		ServerConfig:   srvConfig,
+		NatsConnString: natsConnString,
+		OtlpEndpoint:   otlpEndpoint,
 	})
 }
 
