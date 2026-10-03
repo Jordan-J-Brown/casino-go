@@ -334,7 +334,7 @@ func (service *service) debitFunds(
 	err = store.ApplyWalletTransaction(ctx, walletID, func(wallet *walletmodels.Wallet) (*walletmodels.Transaction, error) {
 		debitErr := wallet.Debit(amount)
 		if debitErr != nil {
-			return nil, err
+			return nil, debitErr
 		}
 		newBalance = wallet.BalanceMinor
 
