@@ -210,7 +210,7 @@ func DefaultCasinoConfig() *config.Config {
 			SessionTTL: 5 * time.Minute,
 		},
 		Games: config.Games{
-			BetSizes:            []int64{5, 10, 20, 50, 1_00, 2_00, 5_00, 10_00, 100_00},
+			BetSizes:            []int64{5, 10, 20, 50, 1_00, 2_00, 5_00, 10_00, 20_00, 100_00},
 			MaxPayoutMultiplier: 250_000,
 		},
 		Engines: config.Engines{

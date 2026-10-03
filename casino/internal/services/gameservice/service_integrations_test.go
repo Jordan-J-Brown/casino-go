@@ -1,4 +1,4 @@
-//go:build integrations
+//go:build integration
 
 package gameservice_test
 
@@ -144,6 +144,34 @@ func TestGameService_Two_Concurrent_Close_Actions(t *testing.T) {
 	}
 }
 
+func TestGameService_Insufficient_Funds(t *testing.T) {
+	ctx := t.Context()
+	env := setupEnv(ctx, t, enginemsg.ServerConfig{
+		RegisterFunc: func(ctx context.Context) (*enginemsg.EngineRegistration, error) {
+			return &enginemsg.EngineRegistration{
+				MinBet: 10,
+				MaxBet: 20_00,
+			}, nil
+		},
+	})
+
+	client := casinotestclient.DefaultClient
+	playRes, err := client.Play(requests.Play{
+		SessionID: env.SessionID,
+		GameID:    mockengine.EngineID,
+		Bet:       20_00,
+		GameData:  []byte(`{}`),
+	})
+	if err != nil {
+		t.Fatal("failed to send play request:", err)
+	}
+	if !playRes.IsError {
+		t.Fatal("expected play to return an error")
+	}
+
+	assert.Equal(t, gamemodels.ErrInsufficientFunds.Error(), playRes.Error.Type)
+}
+
 func TestGameService_Play_Bet_Is_Not_Deducted_Upon_Error(t *testing.T) {
 	ctx := t.Context()
 	env := setupEnv(ctx, t, enginemsg.ServerConfig{
@@ -224,6 +252,66 @@ func TestGameService_Game_Is_Capped_In_Play(t *testing.T) {
 		t.Fatal("expected next request to fail due to capped multiplier")
 	}
 	assert.Equal(t, gamemodels.ErrNextUnavailable.Error(), nextRes.Error.Type)
+
+	closeRes := client.MustClose(requests.Close{
+		SessionID: env.SessionID,
+		GameID:    mockengine.EngineID,
+	})
+
+	closingBalance := closeRes.Result.Balance
+	balanceRes := client.MustGetBalance(requests.Balance{SessionID: env.SessionID})
+	expectedBalance := (env.OriginalBalance - bet) + bet*250_000
+
+	assert.Equal(t, expectedBalance, balanceRes.Result.Balance)
+	assert.Equal(t, expectedBalance, closingBalance)
+}
+
+func TestGameService_Game_Is_Capped_In_Next(t *testing.T) {
+	ctx := t.Context()
+	env := setupEnv(ctx, t, enginemsg.ServerConfig{
+		RegisterFunc: func(ctx context.Context) (*enginemsg.EngineRegistration, error) {
+			return &enginemsg.EngineRegistration{
+				MinBet: 10,
+				MaxBet: 1000,
+			}, nil
+		},
+		PlayHandler: func(ctx context.Context, r enginemsg.PlayRequest) (*enginemsg.RoundResponse, *errorx.Error) {
+			return &enginemsg.RoundResponse{
+				PayoutMultiplier: decimal.NewFromInt(1),
+				PrivateState:     []byte(`{}`),
+				PublicState:      []byte(`{}`),
+			}, nil
+		},
+		NextHandler: func(ctx context.Context, r enginemsg.NextRequest) (*enginemsg.RoundResponse, *errorx.Error) {
+			return &enginemsg.RoundResponse{
+				PayoutMultiplier: decimal.NewFromInt(99999999),
+				PrivateState:     []byte(`{}`),
+				PublicState:      []byte(`{}`),
+			}, nil
+		},
+		CloseHandler: func(ctx context.Context, r enginemsg.CloseRequest) (*enginemsg.CloseResponse, *errorx.Error) {
+			return &enginemsg.CloseResponse{
+				CanClose: true,
+			}, nil
+		},
+	})
+
+	bet := int64(100)
+	client := casinotestclient.DefaultClient
+
+	client.MustPlay(requests.Play{
+		SessionID: env.SessionID,
+		GameID:    mockengine.EngineID,
+		Bet:       bet,
+		GameData:  []byte(`{}`),
+	})
+
+	nextRes := client.MustNext(requests.Next{
+		SessionID: env.SessionID,
+		GameID:    mockengine.EngineID,
+		GameData:  []byte(`{}`),
+	})
+	assert.Equal(t, "250000.00", nextRes.Result.PayoutMultiplier)
 
 	closeRes := client.MustClose(requests.Close{
 		SessionID: env.SessionID,
