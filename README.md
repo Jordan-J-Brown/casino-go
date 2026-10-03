@@ -6,7 +6,7 @@ This project is an online casino/Remote Game Server (RGS) built in Golang. Engin
 
 ### Disclaimer
 
-This is just a portfolio/hobby project and does not represent a production worthy RGS. It serves as a place to demonstrate the knowledge and skills for building backend services using Golang.
+This is just a portfolio/hobby project and does not represent a production worthy RGS. It serves as a place to demonstrate the knowledge and skills I have obtained building backend services using Golang.
 
 ### Features
 - REST API to authenticate and play games.
