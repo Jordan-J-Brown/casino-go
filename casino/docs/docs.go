@@ -229,7 +229,7 @@ const docTemplate = `{
                 "tags": [
                     "Games"
                 ],
-                "summary": "Set up a game",
+                "summary": "Returns game configuration data for clients to initialise a game.",
                 "operationId": "gameSetup",
                 "parameters": [
                     {

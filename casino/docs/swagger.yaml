@@ -273,7 +273,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/responses.Error'
-      summary: Set up a game
+      summary: Returns game configuration data for clients to initialise a game.
       tags:
       - Games
   /health:

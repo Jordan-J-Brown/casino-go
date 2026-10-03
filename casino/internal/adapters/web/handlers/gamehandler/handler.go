@@ -31,7 +31,7 @@ func New(
 
 // Setup returns game configuration and initial round state.
 // @Tags Games
-// @Summary Set up a game
+// @Summary Returns game configuration data for clients to initialise a game.
 // @ID gameSetup
 // @Accept json
 // @Produce json
