@@ -26,6 +26,13 @@ build:
 		--secret id=GITHUB_TOKEN \
 		--build-arg CONFIG_PATH=configs/config.prod.yaml .
 
+# --- Testing ---
+test:
+	@go test -tags !integrations ./...
+
+test-integrations:
+	@go test -tags integrations ./...
+
 # --- DATABASE ---
 
 psql:

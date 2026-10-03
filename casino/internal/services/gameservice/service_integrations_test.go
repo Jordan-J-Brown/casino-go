@@ -1,3 +1,5 @@
+//go:build integrations
+
 package gameservice_test
 
 import (
@@ -175,7 +177,7 @@ func TestGameService_Play_Bet_Is_Not_Deducted_Upon_Error(t *testing.T) {
 	assert.Equal(t, env.OriginalBalance, balanceRes.Result.Balance)
 }
 
-func TestGameService_Game_Is_Capped_Within_Play(t *testing.T) {
+func TestGameService_Game_Is_Capped(t *testing.T) {
 	ctx := t.Context()
 	payoutMultiplier := decimal.NewFromInt(250_001)
 	env := setupEnv(ctx, t, enginemsg.ServerConfig{
@@ -209,6 +211,19 @@ func TestGameService_Game_Is_Capped_Within_Play(t *testing.T) {
 		GameData:  []byte(`{}`),
 	})
 	assert.Equal(t, "250000.00", playRes.Result.PayoutMultiplier)
+
+	nextRes, err := client.Next(requests.Next{
+		SessionID: env.SessionID,
+		GameID:    mockengine.EngineID,
+		GameData:  []byte(`{}`),
+	})
+	if err != nil {
+		t.Fatal("failed to send next request:", err)
+	}
+	if !nextRes.IsError {
+		t.Fatal("expected next request to fail due to capped multiplier")
+	}
+	assert.Equal(t, gamemodels.ErrNextUnavailable.Error(), nextRes.Error.Type)
 
 	closeRes := client.MustClose(requests.Close{
 		SessionID: env.SessionID,
