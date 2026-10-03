@@ -18,9 +18,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//TODO: The tests are failing when they are run together. Possibly due to them relying on an external NATS server in docker.
-// We probably need to add some steps to the bootstrapping to compose the platform.
-
 func TestGameService_Two_Concurrent_Plays(t *testing.T) {
 	ctx := t.Context()
 	env := setupEnv(ctx, t)
