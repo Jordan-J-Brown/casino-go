@@ -141,3 +141,84 @@ func TestGameService_Two_Concurrent_Close_Actions(t *testing.T) {
 		t.Error("unexpected error type returned:", err)
 	}
 }
+
+func TestGameService_Play_Bet_Is_Not_Deducted_Upon_Error(t *testing.T) {
+	ctx := t.Context()
+	env := setupEnv(ctx, t, enginemsg.ServerConfig{
+		RegisterFunc: func(ctx context.Context) (*enginemsg.EngineRegistration, error) {
+			return &enginemsg.EngineRegistration{
+				MinBet: 10,
+				MaxBet: 1000,
+			}, nil
+		},
+		PlayHandler: func(ctx context.Context, r enginemsg.PlayRequest) (*enginemsg.RoundResponse, *errorx.Error) {
+			return nil, errorx.New("error from play")
+		},
+	})
+
+	client := casinotestclient.DefaultClient
+	playRes, err := client.Play(requests.Play{
+		SessionID: env.SessionID,
+		GameID:    mockengine.EngineID,
+		Bet:       100,
+		GameData:  []byte(`{}`),
+	})
+	if err != nil {
+		t.Fatal("failed to send play request:", err)
+	}
+	if !playRes.IsError {
+		t.Fatal("expected play to return an error")
+	}
+
+	balanceRes := client.MustGetBalance(requests.Balance{SessionID: env.SessionID})
+
+	assert.Equal(t, env.OriginalBalance, balanceRes.Result.Balance)
+}
+
+func TestGameService_Game_Is_Capped_Within_Play(t *testing.T) {
+	ctx := t.Context()
+	payoutMultiplier := decimal.NewFromInt(250_001)
+	env := setupEnv(ctx, t, enginemsg.ServerConfig{
+		RegisterFunc: func(ctx context.Context) (*enginemsg.EngineRegistration, error) {
+			return &enginemsg.EngineRegistration{
+				MinBet: 10,
+				MaxBet: 1000,
+			}, nil
+		},
+		PlayHandler: func(ctx context.Context, r enginemsg.PlayRequest) (*enginemsg.RoundResponse, *errorx.Error) {
+			return &enginemsg.RoundResponse{
+				PayoutMultiplier: payoutMultiplier,
+				PrivateState:     []byte(`{}`),
+				PublicState:      []byte(`{}`),
+			}, nil
+		},
+		CloseHandler: func(ctx context.Context, r enginemsg.CloseRequest) (*enginemsg.CloseResponse, *errorx.Error) {
+			return &enginemsg.CloseResponse{
+				CanClose: true,
+			}, nil
+		},
+	})
+
+	bet := int64(100)
+	client := casinotestclient.DefaultClient
+
+	playRes := client.MustPlay(requests.Play{
+		SessionID: env.SessionID,
+		GameID:    mockengine.EngineID,
+		Bet:       bet,
+		GameData:  []byte(`{}`),
+	})
+	assert.Equal(t, "250000.00", playRes.Result.PayoutMultiplier)
+
+	closeRes := client.MustClose(requests.Close{
+		SessionID: env.SessionID,
+		GameID:    mockengine.EngineID,
+	})
+
+	closingBalance := closeRes.Result.Balance
+	balanceRes := client.MustGetBalance(requests.Balance{SessionID: env.SessionID})
+	expectedBalance := (env.OriginalBalance - bet) + bet*250_000
+
+	assert.Equal(t, expectedBalance, balanceRes.Result.Balance)
+	assert.Equal(t, expectedBalance, closingBalance)
+}
