@@ -27,7 +27,6 @@ if [[ -z "$DB_EXISTS" ]]; then
   "${PSQL[@]}" -c "CREATE DATABASE $PG_DB_NAME;"
 else 
   echo "$PG_DB_NAME database exists, skipping creation..."
-  "${PSQL[@]}" -c "CREATE ROLE "
 fi
 
 ROLE_EXISTS=$("${PSQL[@]}" -tAc "SELECT 1 FROM pg_roles WHERE rolname='${PG_DB_ROLE};'")

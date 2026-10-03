@@ -6,3 +6,4 @@ DROP TABLE service.user_wallets;
 DROP TABLE service.wallets;
 DROP TABLE service.user_sessions;
 DROP TABLE service.users;
+DROP SCHEMA service;

@@ -1,3 +1,5 @@
+CREATE SCHEMA IF NOT EXISTS service;
+
 -- Users
 
 CREATE TABLE IF NOT EXISTS service.users (

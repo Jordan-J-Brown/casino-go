@@ -1,3 +1,5 @@
+pgConnectionString := postgres://postgres:password@localhost:5432/postgres?sslmode=disable
+
 # Composes the platform that the casino needs
 platform:
 	@. ./scripts/db/env.sh; \
@@ -10,7 +12,7 @@ platform-down:
 # Runs the casino service locally via go run
 run:
 	@. ./scripts/db/env.sh; \
-	PG_CONNECTION_STRING=postgresql://$${PG_DB_ROLE}:$${PG_DB_ROLE_PASSWORD}@$${PG_HOST}:$${PG_PORT}/$${PG_DB_NAME}?sslmode=$${PG_SSL_MODE} \
+	PG_CONNECTION_STRING="${pgConnectionString}" \
 	go run ./cmd/service/
 
 generate:
@@ -26,16 +28,9 @@ build:
 
 # --- DATABASE ---
 
-# Connects to the Postgres db using the default development connection string
 psql:
 	@. ./scripts/db/env.sh; \
-	psql postgresql://$${PG_SUPERUSER}:$${PG_SUPERUSER_PASSWORD}@$${PG_HOST}:$${PG_PORT}/$${PG_DB_NAME}?sslmode=$${PG_SSL_MODE}
-
-# Initialised the database schema and users
-init-db:
-	@path=./scripts/db/init.sh; \
-	chmod 0700 $$path; \
-	"$$path"
+	psql "${pgConnectionString}"
 
 name :=
 migration:
@@ -47,7 +42,7 @@ migrate-up:
 		echo "golang-migrate not installed. How to install: https://github.com/golang-migrate/migrate/tree/master/cmd/migrate"; \
 		exit 1; \
 	fi; \
-	migrate -path 'migrations' -database "postgresql://$${PG_SUPERUSER}:$${PG_SUPERUSER_PASSWORD}@$${PG_HOST}:$${PG_PORT}/$${PG_DB_NAME}?sslmode=$${PG_SSL_MODE}" up
+	migrate -path 'migrations' -database "${pgConnectionString}" up
 
 migrate-down:
 	@. ./scripts/db/env.sh; \
@@ -55,4 +50,4 @@ migrate-down:
 		echo "golang-migrate not installed. How to install: https://github.com/golang-migrate/migrate/tree/master/cmd/migrate"; \
 		exit 1; \
 	fi; \
-	migrate -path 'migrations' -database "postgresql://$${PG_SUPERUSER}:$${PG_SUPERUSER_PASSWORD}@$${PG_HOST}:$${PG_PORT}/$${PG_DB_NAME}?sslmode=$${PG_SSL_MODE}" down -all
+	migrate -path 'migrations' -database "${pgConnectionString}" down -all
