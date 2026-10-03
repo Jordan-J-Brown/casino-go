@@ -139,7 +139,7 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 			if err == walletmodels.ErrInsufficientFunds {
 				return errorx.NewFromType(string(gamemodels.ErrInsufficientFunds), errorx.WithCode(errorx.ClientError))
 			}
-			return errorx.New("failed to transfer bet", errorx.WithChildren(err))
+			return errorx.New("failed to deduct bet", errorx.WithChildren(err))
 		}
 
 		engineResponse, playErr := service.EngineClient.Play(ctx, request.EngineID, enginemsg.PlayRequest{
