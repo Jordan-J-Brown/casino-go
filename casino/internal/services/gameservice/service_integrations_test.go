@@ -177,7 +177,7 @@ func TestGameService_Play_Bet_Is_Not_Deducted_Upon_Error(t *testing.T) {
 	assert.Equal(t, env.OriginalBalance, balanceRes.Result.Balance)
 }
 
-func TestGameService_Game_Is_Capped(t *testing.T) {
+func TestGameService_Game_Is_Capped_In_Play(t *testing.T) {
 	ctx := t.Context()
 	payoutMultiplier := decimal.NewFromInt(250_001)
 	env := setupEnv(ctx, t, enginemsg.ServerConfig{
