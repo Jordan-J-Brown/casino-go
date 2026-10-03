@@ -1,4 +1,4 @@
-# casino
+# Casino 
 
 ## Running the casino locally
 
@@ -14,7 +14,7 @@ From within the casino directory:
 - Use `make migrate-down` to remove migrations
 - Use `make psql` to connect to the service database from the terminal
 
-# VSCode setup
+## VSCode setup
 
 Add this config to .vscode/launch.json:
 ```json
@@ -46,3 +46,7 @@ Add these settings to your JSON. This configures gopls correctly for the build t
   "go.testTags": "integration",
 }
 ```
+
+## Swagger 
+
+This project uses swag-go to generate swagger docs. Models that contain a field of "string" type but have a format of "json" are actually JSON objects. This is a limitation of the swag-go library it seems. A Postman collection of API routes can be found in [API.postman_collection.json](./API.postman_collection.json).
