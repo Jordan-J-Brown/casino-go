@@ -16,12 +16,31 @@ From within the casino directory:
 
 # VSCode setup
 
-Add these settings to your JSON so that integration test can run via VSCode:
+Add this config to .vscode/launch.json:
+```json
+{
+  {
+    "name": "Run Casino",
+    "type": "go",
+    "request": "launch",
+    "mode": "auto",
+    "cwd": "${workspaceRoot}/casino",
+    "program": "${workspaceRoot}/casino/cmd/service/main.go",
+    "buildFlags": [ //These build flags are optional. They enable the profiling endpoints to be registered.
+      "-tags",
+      "local"
+    ],
+    "envFile": "/Users/jordanbrownwork/personal/casino-go/casino/.env"
+  }
+}
+```
+
+Add these settings to your JSON. This configures gopls correctly for the build tags this project uses:
 ```json
 {
   "gopls": {
     "build.buildFlags": [
-      "-tags=integration"
+      "-tags=local,integration"
     ]
   },
   "go.testTags": "integration",

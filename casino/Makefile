@@ -26,6 +26,9 @@ build:
 		--secret id=GITHUB_TOKEN \
 		--build-arg CONFIG_PATH=configs/config.prod.yaml .
 
+pprof-cpu:
+	@go tool pprof -http : http://localhost:6060/debug/pprof/profile?seconds=15
+
 # --- Testing ---
 test:
 	@go test -tags !integrations ./...
