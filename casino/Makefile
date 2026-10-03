@@ -2,8 +2,7 @@ pgConnectionString := postgres://postgres:password@localhost:5432/postgres?sslmo
 
 # Composes the platform that the casino needs
 platform:
-	@. ./scripts/db/env.sh; \
-	docker compose -f ./compose/docker-compose.platform.local.yaml up -d
+	@docker compose -f ./compose/docker-compose.platform.local.yaml up -d
 
 # Decomposes the platform that the casino needs
 platform-down:
@@ -11,8 +10,7 @@ platform-down:
 
 # Runs the casino service locally via go run
 run:
-	@. ./scripts/db/env.sh; \
-	PG_CONNECTION_STRING="${pgConnectionString}" \
+	@PG_CONNECTION_STRING="${pgConnectionString}" \
 	go run ./cmd/service/
 
 generate:
@@ -46,24 +44,21 @@ test-integrations:
 # --- DATABASE ---
 
 psql:
-	@. ./scripts/db/env.sh; \
-	psql "${pgConnectionString}"
+	@psql "${pgConnectionString}"
 
 name :=
 migration:
 	migrate create -ext .sql -dir ./migrations -seq -digits 4 ${name}
 
 migrate-up:
-	@. ./scripts/db/env.sh; \
-	if ! command -v migrate >/dev/null 2>&1; then \
+	@if ! command -v migrate >/dev/null 2>&1; then \
 		echo "golang-migrate not installed. How to install: https://github.com/golang-migrate/migrate/tree/master/cmd/migrate"; \
 		exit 1; \
 	fi; \
 	migrate -path 'migrations' -database "${pgConnectionString}" up
 
 migrate-down:
-	@. ./scripts/db/env.sh; \
-	if ! command -v migrate >/dev/null 2>&1; then \
+	@if ! command -v migrate >/dev/null 2>&1; then \
 		echo "golang-migrate not installed. How to install: https://github.com/golang-migrate/migrate/tree/master/cmd/migrate"; \
 		exit 1; \
 	fi; \
