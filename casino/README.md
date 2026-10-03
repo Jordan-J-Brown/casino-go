@@ -1,4 +1,24 @@
-# Casino 
+# Casino-Go
+
+## Project overview
+
+This project is an online casino/Remote Game Server (RGS) built in Golang. Engines connect to the casino service via NATS.
+
+### Disclaimer
+
+This is just a portfolio/hobby project and does not represent a production worthy RGS. It serves as a place to demonstrate the knowledge and skills for building backend services using Golang.
+
+### Features
+- REST API to authenticate and play games.
+- Swagger docs and swagger endpoint.
+- Postgres data store for players and games.
+- Microservice based engines that communicate with the casino via NATS queue groups. Queue groups allow horizontal scaling of engines, picking one randomly to process the messages.
+- Integration tests utilising testcontainers, isolated using go build tags.
+
+### Future improvements 
+- Multiplayer games using web sockets (poker, blackjack).
+- Move bet size and max payout multiplier configs to Postgres, along with an in-memory cache for fast lookups.
+- Implement real authentication handling. Currently the authentication endpoint just creates a new player with a balance to play the engines.
 
 ## Running the casino locally
 
@@ -6,6 +26,7 @@ From within the casino directory:
 1. Run `make platform` to compose core containers (NATS, Postgres etc).
 2. Run `make migrate-up` to initialise the DB. 
 3. Run `make run`.
+4. Within the `./engines/mines` directory, run `make run` to start the mines engine.
 
 ## Database
 
