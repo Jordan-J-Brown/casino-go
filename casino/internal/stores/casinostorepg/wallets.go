@@ -44,7 +44,7 @@ func (store *Store) ApplyWalletTransaction(
 
 	walletTransaction, err := applyFn(wallet)
 	if err != nil {
-		return errorx.New("failed to apply wallet transaction", errorx.WithChildren(err))
+		return err
 	}
 	if walletTransaction == nil {
 		return errorx.New("nil wallet transaction returned")
