@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/domain/gamemodels"
-	"github.com/Jordan-J-Brown/casino-go/casino/internal/tests/integrations/casinotestclient"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/tests/integrations/mockengine"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
+	"github.com/Jordan-J-Brown/casino-go/pkg/casinoclient"
 	"github.com/Jordan-J-Brown/casino-go/pkg/chans"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/msg/enginemsg"
@@ -28,7 +28,7 @@ func TestGameService_Two_Concurrent_Plays(t *testing.T) {
 		wg.Go(func() {
 			(&gameWorker{
 				sessionID: env.SessionID,
-				client:    casinotestclient.NewDefaultClient(),
+				client:    casinoclient.NewDefaultClient(),
 				errs:      errChan,
 				steps:     []gameStep{stepPlay},
 			}).run()
@@ -52,7 +52,7 @@ func TestGameService_Two_Concurrent_Next_Actions(t *testing.T) {
 	ctx := t.Context()
 	env := setupEnv(ctx, t)
 
-	res, err := casinotestclient.DefaultClient.Play(requests.Play{
+	res, err := casinoclient.DefaultClient.Play(requests.Play{
 		SessionID: env.SessionID,
 		GameID:    mockengine.EngineID,
 		Bet:       100,
@@ -71,7 +71,7 @@ func TestGameService_Two_Concurrent_Next_Actions(t *testing.T) {
 		wg.Go(func() {
 			(&gameWorker{
 				sessionID: env.SessionID,
-				client:    casinotestclient.NewDefaultClient(),
+				client:    casinoclient.NewDefaultClient(),
 				errs:      errChan,
 				steps:     []gameStep{stepNext},
 			}).run()
@@ -95,7 +95,7 @@ func TestGameService_Two_Concurrent_Close_Actions(t *testing.T) {
 	ctx := t.Context()
 	env := setupEnv(ctx, t)
 
-	res, err := casinotestclient.DefaultClient.Play(requests.Play{
+	res, err := casinoclient.DefaultClient.Play(requests.Play{
 		SessionID: env.SessionID,
 		GameID:    mockengine.EngineID,
 		Bet:       100,
@@ -114,7 +114,7 @@ func TestGameService_Two_Concurrent_Close_Actions(t *testing.T) {
 		wg.Go(func() {
 			(&gameWorker{
 				sessionID: env.SessionID,
-				client:    casinotestclient.NewDefaultClient(),
+				client:    casinoclient.NewDefaultClient(),
 				errs:      errChan,
 				steps:     []gameStep{stepClose},
 			}).run()
@@ -122,7 +122,7 @@ func TestGameService_Two_Concurrent_Close_Actions(t *testing.T) {
 	}
 	wg.Wait()
 
-	balanceRes := casinotestclient.DefaultClient.MustGetBalance(requests.Balance{
+	balanceRes := casinoclient.DefaultClient.MustGetBalance(requests.Balance{
 		SessionID: env.SessionID,
 	})
 	if !assert.Equal(t, int64(1000), balanceRes.Result.Balance) {
@@ -152,7 +152,7 @@ func TestGameService_Insufficient_Funds(t *testing.T) {
 		},
 	})
 
-	client := casinotestclient.DefaultClient
+	client := casinoclient.DefaultClient
 	playRes, err := client.Play(requests.Play{
 		SessionID: env.SessionID,
 		GameID:    mockengine.EngineID,
@@ -183,7 +183,7 @@ func TestGameService_Play_Bet_Is_Not_Deducted_Upon_Error(t *testing.T) {
 		},
 	})
 
-	client := casinotestclient.DefaultClient
+	client := casinoclient.DefaultClient
 	playRes, err := client.Play(requests.Play{
 		SessionID: env.SessionID,
 		GameID:    mockengine.EngineID,
@@ -227,7 +227,7 @@ func TestGameService_Game_Is_Capped_In_Play(t *testing.T) {
 	})
 
 	bet := int64(100)
-	client := casinotestclient.DefaultClient
+	client := casinoclient.DefaultClient
 
 	playRes := client.MustPlay(requests.Play{
 		SessionID: env.SessionID,
@@ -294,7 +294,7 @@ func TestGameService_Game_Is_Capped_In_Next(t *testing.T) {
 	})
 
 	bet := int64(100)
-	client := casinotestclient.DefaultClient
+	client := casinoclient.DefaultClient
 
 	client.MustPlay(requests.Play{
 		SessionID: env.SessionID,

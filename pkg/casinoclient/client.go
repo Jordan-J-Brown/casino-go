@@ -1,4 +1,4 @@
-package casinotestclient
+package casinoclient
 
 import (
 	"bytes"
