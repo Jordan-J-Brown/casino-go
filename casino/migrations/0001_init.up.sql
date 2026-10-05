@@ -9,12 +9,13 @@ CREATE TABLE IF NOT EXISTS service.users (
 );
 
 CREATE TABLE IF NOT EXISTS service.user_sessions (
-  session_id uuid      PRIMARY KEY,
-  user_id    uuid      REFERENCES service.users ON DELETE CASCADE,
-  expires_at timestamp NOT NULL
+  session_id_hash char(44)  PRIMARY KEY,
+  user_id         uuid      REFERENCES service.users ON DELETE CASCADE,
+  revoked         boolean   DEFAULT false,
+  expires_at      timestamp NOT NULL
 );
 
-CREATE INDEX session_expiry ON service.user_sessions (expires_at);
+CREATE INDEX session_expiry ON service.user_sessions (session_id_hash, revoked, expires_at);
 
 -- Wallets
 

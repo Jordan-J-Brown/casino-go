@@ -12,19 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type TransactionType = string
-
-const (
-	transactionTypeDebit  TransactionType = "DEBIT"
-	transactionTypeCredit TransactionType = "CREDIT"
-)
-
-type ErrUnknownTransactionType string
-
-func (err ErrUnknownTransactionType) Error() string {
-	return "unknown transaction type: " + string(err)
-}
-
 func (s *Store) GetUserByID(ctx context.Context, id string) (user *usermodels.User, err error) {
 	userExists, err := s.userExists(ctx, id)
 	if err != nil {
@@ -50,7 +37,7 @@ func (s *Store) GetUserByID(ctx context.Context, id string) (user *usermodels.Us
 	return user, nil
 }
 
-func (s *Store) GetUserFromSessionID(ctx context.Context, sessionID string) (*usermodels.User, error) {
+func (s *Store) GetUserFromSessionID(ctx context.Context, sessionIdHash string) (*usermodels.User, error) {
 	user := &usermodels.User{}
 	err := s.tx.QueryRow(ctx, `
 	 SELECT user_id, wallet_id
@@ -58,14 +45,14 @@ func (s *Store) GetUserFromSessionID(ctx context.Context, sessionID string) (*us
 	 WHERE user_id=(
 	 	SELECT user_id 
 		FROM service.user_sessions 
-		WHERE session_id=$1 AND expires_at > now()
+		WHERE session_id_hash=$1 AND expires_at > now() AND revoked=false
 	 );
-	`, sessionID).Scan(&user.ID, &user.WalletID)
+	`, sessionIdHash).Scan(&user.ID, &user.WalletID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
-		return nil, errorx.Newf("failed to get user for session ID: %s", sessionID, errorx.WithChildren(err))
+		return nil, errorx.Newf("failed to get user for session ID: %s", sessionIdHash, errorx.WithChildren(err))
 	}
 
 	return user, nil
@@ -110,11 +97,11 @@ func (s *Store) CreateUserWithBalance(ctx context.Context, username string, bala
 
 func (s *Store) CreateSessionForUser(
 	ctx context.Context,
-	sessionID string,
+	sessionIdHash string,
 	user *usermodels.User,
 	expiresAt time.Time,
 ) error {
-	exists, err := s.sessionExists(ctx, sessionID)
+	exists, err := s.sessionExists(ctx, sessionIdHash)
 	if err != nil {
 		return err
 	}
@@ -124,16 +111,24 @@ func (s *Store) CreateSessionForUser(
 
 	_, err = s.tx.Exec(ctx, `
 		INSERT INTO 
-			service.user_sessions (session_id, user_id, expires_at)
+			service.user_sessions (session_id_hash, user_id, expires_at)
 		VALUES
 			($1, $2, $3)
 		;`,
-		sessionID, user.ID, formatTimestamp(expiresAt),
+		sessionIdHash, user.ID, formatTimestamp(expiresAt),
 	)
 	if err != nil {
 		return errorx.New("failed to insert session", errorx.WithChildren(err))
 	}
 
+	return nil
+}
+
+func (s *Store) RevokeSession(ctx context.Context, sessionIdHash string) error {
+	_, err := s.tx.Exec(ctx, `UPDATE service.user_sessions SET revoked=true WHERE session_id_hash='$1';`, sessionIdHash)
+	if err != nil {
+		return errorx.Newf("failed to revoke session. Hash: %s", sessionIdHash, errorx.WithChildren(err))
+	}
 	return nil
 }
 
@@ -176,11 +171,11 @@ func (s *Store) userExists(ctx context.Context, id string) (exists bool, err err
 	return exists, err
 }
 
-func (s *Store) sessionExists(ctx context.Context, sessionID string) (exists bool, err error) {
+func (s *Store) sessionExists(ctx context.Context, sessionIdHash string) (exists bool, err error) {
 	err = s.tx.QueryRow(
 		ctx,
-		`SELECT EXISTS(SELECT 1 FROM service.user_sessions WHERE session_id=$1 AND expires_at > now());`,
-		sessionID,
+		`SELECT EXISTS(SELECT 1 FROM service.user_sessions WHERE session_id_hash=$1 AND expires_at > now() AND revoked=false);`,
+		sessionIdHash,
 	).Scan(&exists)
 	if err != nil {
 		err = errorx.New("failed to check if session exists", errorx.WithChildren(err))

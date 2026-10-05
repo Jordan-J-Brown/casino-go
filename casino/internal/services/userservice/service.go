@@ -3,7 +3,6 @@ package userservice
 import (
 	"context"
 	"time"
-	"uuid"
 
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/domain/usermodels"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
@@ -15,6 +14,7 @@ type Service interface {
 	GetUserBalance(ctx context.Context, user *usermodels.User) (int64, *errorx.Error)
 	CreateUserWithBalance(ctx context.Context, username string, balance int64) (*usermodels.User, *errorx.Error)
 	CreateSessionForUser(ctx context.Context, user *usermodels.User) (sessionID string, err *errorx.Error)
+	RevokeSession(ctx context.Context, sessionID string) *errorx.Error
 }
 
 type service struct {
@@ -52,8 +52,13 @@ func (s *service) GetUserByID(ctx context.Context, id string) (user *usermodels.
 }
 
 func (s *service) GetUserFromSessionID(ctx context.Context, sessionID string) (user *usermodels.User, err *errorx.Error) {
+	rawSessionID, idErr := newSessionIdFromB64(sessionID)
+	if idErr != nil {
+		return nil, errorx.NewFromType(string(usermodels.ErrInvalidSessionID), errorx.WithCode(errorx.ClientError))
+	}
+
 	storeErr := s.StoreProvider.UseStore(ctx, func(store Store) error {
-		userFromStore, err := store.GetUserFromSessionID(ctx, sessionID)
+		userFromStore, err := store.GetUserFromSessionID(ctx, rawSessionID.Base64Sha256())
 		user = userFromStore
 		return err
 	})
@@ -107,8 +112,9 @@ func (s *service) CreateUserWithBalance(ctx context.Context, username string, ba
 
 func (s *service) CreateSessionForUser(ctx context.Context, user *usermodels.User) (sessionID string, err *errorx.Error) {
 	storeErr := s.StoreProvider.UseStore(ctx, func(store Store) error {
-		sessionID = uuid.New().String()
-		err := store.CreateSessionForUser(ctx, sessionID, user, time.Now().Add(s.SessionTTL))
+		rawSessionID := newSessionID()
+		sessionID = rawSessionID.Base64()
+		err := store.CreateSessionForUser(ctx, rawSessionID.Base64Sha256(), user, time.Now().Add(s.SessionTTL))
 		return err
 	})
 	if storeErr != nil {
@@ -116,6 +122,22 @@ func (s *service) CreateSessionForUser(ctx context.Context, user *usermodels.Use
 	}
 
 	return
+}
+
+func (s *service) RevokeSession(ctx context.Context, sessionID string) *errorx.Error {
+	rawSessionID, err := newSessionIdFromB64(sessionID)
+	if err != nil {
+		return errorx.NewFromType(string(usermodels.ErrInvalidSessionID), errorx.WithCode(errorx.ClientError))
+	}
+
+	storeErr := s.StoreProvider.UseStore(ctx, func(store Store) error {
+		return store.RevokeSession(ctx, rawSessionID.Base64Sha256())
+	})
+	if storeErr != nil {
+		return errorx.NewFromError(storeErr)
+	}
+
+	return nil
 }
 
 func isValidUsername(username string) bool {

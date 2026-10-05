@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: postgres
     ports:
-      - "$PG_PORT:5432"
+      - "5432:5432"
     volumes:
       - /var/lib/postgresql/MAJOR/docker
     healthcheck:
