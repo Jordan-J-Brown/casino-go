@@ -137,13 +137,6 @@ func (c *Client) MustClose(r requests.Close) *Response[responses.Close] {
 	return res
 }
 
-type Response[R any] struct {
-	HttpResponse *http.Response
-	IsError      bool
-	Error        responses.Error
-	Result       R
-}
-
 func (c *Client) post[Req, Res any](url string, r Req) (*Response[Res], error) {
 	data, err := json.Marshal(r)
 	if err != nil {
@@ -173,4 +166,11 @@ func (c *Client) post[Req, Res any](url string, r Req) (*Response[Res], error) {
 	}
 
 	return &res, nil
+}
+
+type Response[R any] struct {
+	HttpResponse *http.Response
+	IsError      bool
+	Error        responses.Error
+	Result       R
 }

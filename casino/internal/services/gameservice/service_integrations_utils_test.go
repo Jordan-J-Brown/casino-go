@@ -13,7 +13,7 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/tests/integrations"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/tests/integrations/mockengine"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
-	casinotestclient "github.com/Jordan-J-Brown/casino-go/pkg/casinoclient"
+	"github.com/Jordan-J-Brown/casino-go/pkg/casinoclient"
 	"github.com/Jordan-J-Brown/casino-go/pkg/config"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
@@ -53,7 +53,7 @@ func setupEnv(ctx context.Context, t *testing.T, engineConfig ...enginemsg.Serve
 	username := "player-" + rand.Text()[:8]
 
 	balance := int64(1000)
-	authResp, err := casinotestclient.DefaultClient.Auth(requests.Auth{
+	authResp, err := casinoclient.DefaultClient.Auth(requests.Auth{
 		Username: username,
 		Balance:  balance,
 	})
@@ -139,7 +139,7 @@ const (
 
 type gameWorker struct {
 	sessionID string
-	client    *casinotestclient.Client
+	client    *casinoclient.Client
 	errs      chan<- error
 	steps     []gameStep
 }
