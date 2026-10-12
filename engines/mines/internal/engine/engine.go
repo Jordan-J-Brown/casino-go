@@ -32,7 +32,7 @@ func Start(ctx context.Context, cfg *config.Config, logger logsx.Logger) (engine
 	}
 	defer func() {
 		if err != nil {
-			engine.Shutdown()
+			engine.Shutdown(ctx)
 		}
 	}()
 
@@ -61,6 +61,7 @@ func Start(ctx context.Context, cfg *config.Config, logger logsx.Logger) (engine
 		NextHandler:  engine.Next,
 		CloseHandler: engine.Close,
 	})
+	baseApp.RegisterShutdownFunc("msg_server", msgServer.Shutdown)
 	if err != nil {
 		return
 	}
