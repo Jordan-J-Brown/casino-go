@@ -19,7 +19,7 @@ import (
 // Shutdown should be called to handle graceful shutdown.
 type BaseApplication struct {
 	shutdownChan  <-chan struct{}
-	shutdownFuncs []func(context.Context) error
+	shutdownFuncs []shutdownFn
 	Logger        logsx.Logger
 	Tracer        trace.Tracer
 	NatsConn      *nats.Conn
@@ -35,13 +35,13 @@ type BaseAppConfig struct {
 func NewBaseApplication(ctx context.Context, logger logsx.Logger, cfg BaseAppConfig) (base *BaseApplication, err error) {
 	baseApp := &BaseApplication{
 		shutdownChan:  ctx.Done(),
-		shutdownFuncs: make([]func(context.Context) error, 0, 2),
+		shutdownFuncs: make([]shutdownFn, 0, 2),
 		Logger:        logger,
 	}
 	defer func() {
 		if err != nil {
 			baseApp.Logger.ErrorContext(ctx, "failed to create base application", "error", err)
-			baseApp.Shutdown()
+			baseApp.Shutdown(ctx)
 		}
 	}()
 	if logger == nil {
@@ -58,7 +58,7 @@ func NewBaseApplication(ctx context.Context, logger logsx.Logger, cfg BaseAppCon
 	if err != nil {
 		return nil, err
 	}
-	baseApp.shutdownFuncs = append(baseApp.shutdownFuncs, otelShutDown)
+	baseApp.RegisterShutdownFunc("otel", otelShutDown)
 	baseApp.Tracer = otel.Tracer(cfg.ServiceName)
 
 	//Setup NATS
@@ -75,7 +75,7 @@ func NewBaseApplication(ctx context.Context, logger logsx.Logger, cfg BaseAppCon
 		return nil, errorx.New("failed to create NATS connection", errorx.WithChildren(err))
 	}
 	baseApp.NatsConn = nc
-	baseApp.shutdownFuncs = append(baseApp.shutdownFuncs, func(ctx context.Context) error {
+	baseApp.RegisterShutdownFunc("core_nats_connection", func(ctx context.Context) error {
 		nc := baseApp.NatsConn
 		if err := nc.Drain(); err != nil {
 			nc.Close()
@@ -88,15 +88,20 @@ func NewBaseApplication(ctx context.Context, logger logsx.Logger, cfg BaseAppCon
 	return baseApp, nil
 }
 
-func (base *BaseApplication) RegisterShutdownFunc(fn func(context.Context) error) {
-	base.shutdownFuncs = append(base.shutdownFuncs, fn)
+func (base *BaseApplication) RegisterShutdownFunc(name string, fn func(context.Context) error) {
+	base.shutdownFuncs = append(base.shutdownFuncs, shutdownFn{name, fn})
 }
 
-func (base *BaseApplication) Shutdown() {
-	ctx := context.Background()
-	for i, shutdown := range slices.Backward(base.shutdownFuncs) {
-		if err := shutdown(ctx); err != nil {
-			base.Logger.ErrorContext(ctx, "failed to run shutdown at index %d. Error: %s", i, err.Error())
+func (base *BaseApplication) Shutdown(ctx context.Context) {
+	for _, shutdown := range slices.Backward(base.shutdownFuncs) {
+		base.Logger.DebugContext(ctx, "Running shutdown func", "name", shutdown.name)
+		if err := shutdown.fn(ctx); err != nil {
+			base.Logger.ErrorContext(ctx, "failed to run shutdown func", "name", shutdown.name, "error", err.Error())
 		}
 	}
+}
+
+type shutdownFn struct {
+	name string
+	fn   func(context.Context) error
 }
