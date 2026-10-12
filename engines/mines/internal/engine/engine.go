@@ -106,11 +106,23 @@ func (engine *Engine) Play(ctx context.Context, r enginemsg.PlayRequest) (res *e
 
 	var request requests.PlayRequest
 	if err := json.Unmarshal(r.MetaData, &request); err != nil {
-		return nil, errorx.NewFromType("BAD_REQUEST", errorx.WithCode(errorx.ClientError), errorx.WithChildren(err))
+		return nil, badRequest(err)
+	}
+
+	var rng *randx.CryptoGenerator
+	if !engine.cfg.Env.IsProd() && request.Dev != nil && request.Dev.Seed != "" {
+		rngSeeded, err := randx.NewCryptoGeneratorFromBase64Seed(request.Dev.Seed)
+		if err != nil {
+			return nil, badRequest(err)
+		}
+
+		rng = rngSeeded
+	} else {
+		rng = randx.NewCryptoGenerator()
 	}
 
 	game, err := minesgame.New(minesgame.Config{
-		Rng:       randx.NewCryptoGenerator(),
+		Rng:       rng,
 		Bet:       r.Bet,
 		Mines:     request.Mines,
 		GridSize:  engine.mathModel.GridSize,
@@ -123,10 +135,18 @@ func (engine *Engine) Play(ctx context.Context, r enginemsg.PlayRequest) (res *e
 		return nil, errorx.New("failed to create game", errorx.WithCode(errorx.ServerError), errorx.WithChildren(err))
 	}
 
+	var devInfo *responses.DevInfo
+	if !engine.cfg.Env.IsProd() {
+		devInfo = &responses.DevInfo{
+			Seed: rng.EncodeSeedBase64(),
+		}
+	}
+
 	publicState, err := json.Marshal(responses.PlayResponse{
 		State:            game.State.String(),
 		PayoutMultiplier: game.PayoutMultiplier.String(),
 		Mines:            game.Mines,
+		Dev:              devInfo,
 	})
 	if err != nil {
 		return nil, errorx.New("failed to marshal public state", errorx.WithCode(errorx.ServerError), errorx.WithChildren(err))
@@ -150,7 +170,7 @@ func (engine *Engine) Next(ctx context.Context, r enginemsg.NextRequest) (res *e
 	var request requests.NextRequest
 	if err := json.Unmarshal(r.MetaData, &request); err != nil {
 		engine.logger.ErrorContext(ctx, "failed to unmarshal next request", "error", err)
-		return nil, errorx.NewFromType("BAD_REQUEST", errorx.WithCode(errorx.ClientError), errorx.WithChildren(err))
+		return nil, badRequest(err)
 	}
 
 	game := new(minesgame.Game)
@@ -203,4 +223,8 @@ func (engine *Engine) Close(ctx context.Context, r enginemsg.CloseRequest) (res 
 	return &enginemsg.CloseResponse{
 		CanClose: !game.IsPlaying(),
 	}, nil
+}
+
+func badRequest(err error) *errorx.Error {
+	return errorx.NewFromType("BAD_REQUEST", errorx.WithCode(errorx.ClientError), errorx.WithChildren(err))
 }

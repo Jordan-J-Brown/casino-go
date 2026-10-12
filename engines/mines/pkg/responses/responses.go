@@ -1,9 +1,10 @@
 package responses
 
 type PlayResponse struct {
-	State            string `json:"state"`
-	PayoutMultiplier string `json:"payoutMultiplier"`
-	Mines            int    `json:"mines"`
+	State            string   `json:"state"`
+	PayoutMultiplier string   `json:"payoutMultiplier"`
+	Mines            int      `json:"mines"`
+	Dev              *DevInfo `json:"dev,omitzero"`
 }
 
 type NextResponse struct {
@@ -19,4 +20,8 @@ type MetaData struct {
 
 type GameConfig struct {
 	GridSize int `json:"gridSize"`
+}
+
+type DevInfo struct {
+	Seed string `json:"seed"`
 }
