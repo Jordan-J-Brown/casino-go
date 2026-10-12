@@ -31,38 +31,47 @@ type Client struct {
 
 func New(
 	baseURL string,
-	httpClient *http.Client,
+	httpClient ...*http.Client,
 ) *Client {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
+	var hclient *http.Client
+	if len(httpClient) == 1 {
+		hclient = httpClient[0]
+	} else {
+		hclient = newDefaultHttpClient()
 	}
 
 	return &Client{
 		baseURL: baseURL,
-		hclient: httpClient,
+		hclient: hclient,
 	}
 }
 
 func NewDefaultClient() *Client {
+	return &Client{
+		baseURL: DefaultBaseURL,
+		hclient: newDefaultHttpClient(),
+	}
+}
+
+func newDefaultHttpClient() *http.Client {
 	//Copies the defaults from stdlib
 
 	dialer := &net.Dialer{
-		Timeout:   30 * time.Second,
+		Timeout:   10 * time.Second,
 		KeepAlive: 30 * time.Second,
 	}
 
-	return &Client{
-		baseURL: DefaultBaseURL,
-		hclient: &http.Client{
-			Transport: &http.Transport{
-				Proxy:                 http.ProxyFromEnvironment,
-				DialContext:           dialer.DialContext,
-				ForceAttemptHTTP2:     true,
-				MaxIdleConns:          100,
-				IdleConnTimeout:       90 * time.Second,
-				TLSHandshakeTimeout:   10 * time.Second,
-				ExpectContinueTimeout: 1 * time.Second,
-			},
+	return &http.Client{
+		Transport: &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           dialer.DialContext,
+			ForceAttemptHTTP2:     true,
+			ResponseHeaderTimeout: 10 * time.Second,
+
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
 		},
 	}
 }
