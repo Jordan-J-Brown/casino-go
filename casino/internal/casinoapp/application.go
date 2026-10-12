@@ -12,7 +12,6 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/userservice"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/stores/casinostorepg"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/stores/engineregstore"
-	baseconfig "github.com/Jordan-J-Brown/casino-go/pkg/config"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/pgdb"
@@ -36,7 +35,7 @@ func (app *Application) initServices(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	app.RegisterShutdownFunc(func(ctx context.Context) error {
+	app.RegisterShutdownFunc("pg_pool", func(ctx context.Context) error {
 		pgPool.Close()
 		return nil
 	})
@@ -44,10 +43,16 @@ func (app *Application) initServices(ctx context.Context) error {
 	engineRegistry := engineregistry.New(ctx, app.Logger, engineregstore.New())
 	app.Services.EngineRegistry = engineRegistry
 
+	engineClient, err := engineclient.New(ctx, app.NatsConn, app.Tracer, app.config.Engines.ClientTimeoutSeconds)
+	if err != nil {
+		return err
+	}
+	app.RegisterShutdownFunc("engine_client", engineClient.Shutdown)
+
 	app.Services.GameService = gameservice.New(ctx, gameservice.Config{
 		MaxPayoutMultiplier: app.config.Games.MaxPayoutMultiplier,
 		EngineRegistry:      engineRegistry,
-		EngineClient:        engineclient.New(app.NatsConn, app.Tracer, app.config.Engines.ClientTimeoutSeconds),
+		EngineClient:        engineClient,
 		BetSizes:            app.config.Games.BetSizes,
 		StoreProvider: &casinostorepg.CasinoGameStoreProvider{
 			Pool:   pgPool,
@@ -73,16 +78,12 @@ func (app *Application) initServices(ctx context.Context) error {
 func Run(ctx context.Context, logger logsx.Logger, cfg *config.Config) (app *Application, err error) {
 	defer func() {
 		if err != nil {
-			app.Shutdown()
+			app.Shutdown(ctx)
 		}
 	}()
 
 	app = &Application{
 		config: cfg,
-	}
-
-	if cfg.Env == baseconfig.Local {
-		errorx.OutputStack = true
 	}
 
 	base, err := service.NewBaseApplication(ctx, logger, service.BaseAppConfig{
@@ -104,7 +105,7 @@ func Run(ctx context.Context, logger logsx.Logger, cfg *config.Config) (app *App
 	if err != nil {
 		return app, errorx.New("failed to start message server", errorx.WithChildren(err))
 	}
-	app.RegisterShutdownFunc(msgAPI.Shutdown)
+	app.RegisterShutdownFunc("msg_api", msgAPI.Shutdown)
 
 	webApiShutdown := web.RunApiAsync(ctx, web.ApiConfig{
 		Port:        app.config.API.Port,
@@ -113,7 +114,7 @@ func Run(ctx context.Context, logger logsx.Logger, cfg *config.Config) (app *App
 		UserService: app.Services.UserService,
 		GameService: app.Services.GameService,
 	})
-	app.RegisterShutdownFunc(webApiShutdown)
+	app.RegisterShutdownFunc("web_api", webApiShutdown)
 
 	app.Logger.DebugContext(ctx, "Running...", "env", cfg.Env)
 

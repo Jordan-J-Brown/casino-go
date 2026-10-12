@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 
 	"github.com/Jordan-J-Brown/casino-go/pkg/contextx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
@@ -21,72 +22,72 @@ func HandleRPC[Req, Res any](
 	handler HandlerFunc[Req, Res],
 ) nats.MsgHandler {
 	return func(msg *nats.Msg) {
-		respond := func(status Status, response any) {
-			var err error
-			defer func() {
+			respond := func(status Status, response any) {
+				var err error
+				defer func() {
+					if err != nil {
+						logger.ErrorContext(ctx, "failed to respond to message",
+							"subject", msg.Subject,
+							"reply_subject", msg.Reply,
+							"error", err.Error(),
+						)
+					}
+				}()
+
+				header := nats.Header{
+					"Status": []string{status},
+				}
+				otel.GetTextMapPropagator().Inject(ctx, &NatsOtelHeaderCarrier{header})
+
+				data, err := json.Marshal(response)
 				if err != nil {
-					logger.ErrorContext(ctx, "failed to respond to message",
-						"subject", msg.Subject,
-						"reply_subject", msg.Reply,
-						"error", err.Error(),
-					)
+					return
+				}
+
+				err = msg.RespondMsg(&nats.Msg{
+					Header: header,
+					Data:   data,
+				})
+			}
+
+			defer func() {
+				if r := recover(); r != nil {
+					respond(StatusError, ErrorResponse{
+						StatusCode: http.StatusInternalServerError,
+						Message:    fmt.Sprintf("Panic recover: %v. Stack: %s\n", r, debug.Stack()),
+					})
 				}
 			}()
 
-			header := nats.Header{
-				"Status": []string{status},
+			cid := msg.Header.Get(HeaderCorrelationID)
+			if cid != "" {
+				ctx = context.WithValue(ctx, contextx.CtxKeyCorrelationID, cid)
 			}
-			otel.GetTextMapPropagator().Inject(ctx, &NatsOtelHeaderCarrier{header})
 
-			data, err := json.Marshal(response)
-			if err != nil {
+			ctx = otel.GetTextMapPropagator().Extract(ctx, &NatsOtelHeaderCarrier{msg.Header})
+			ctx, span := tracer.Start(ctx, msg.Subject)
+			defer span.End()
+
+			var request Req
+			if err := json.Unmarshal(msg.Data, &request); err != nil {
+				respond(StatusError, ErrorResponse{
+					StatusCode: http.StatusInternalServerError,
+					Message:    "failed to unmarshal message data: " + err.Error(),
+				})
 				return
 			}
 
-			err = msg.RespondMsg(&nats.Msg{
-				Header: header,
-				Data:   data,
-			})
-		}
-
-		defer func() {
-			if r := recover(); r != nil {
+			response, err := handler(ctx, request)
+			if err != nil {
 				respond(StatusError, ErrorResponse{
-					StatusCode: http.StatusInternalServerError,
-					Message:    fmt.Sprintf("Panic recover: %v", r),
+					StatusCode: StatusCodeFromError(err),
+					Type:       err.Type(),
+					Message:    "error from message handler: " + err.Error(),
 				})
+				return
 			}
-		}()
 
-		cid := msg.Header.Get(HeaderCorrelationID)
-		if cid != "" {
-			ctx = context.WithValue(ctx, contextx.CtxKeyCorrelationID, cid)
-		}
-
-		ctx = otel.GetTextMapPropagator().Extract(ctx, &NatsOtelHeaderCarrier{msg.Header})
-		ctx, span := tracer.Start(ctx, msg.Subject)
-		defer span.End()
-
-		var request Req
-		if err := json.Unmarshal(msg.Data, &request); err != nil {
-			respond(StatusError, ErrorResponse{
-				StatusCode: http.StatusInternalServerError,
-				Message:    "failed to unmarshal message data: " + err.Error(),
-			})
-			return
-		}
-
-		response, err := handler(ctx, request)
-		if err != nil {
-			respond(StatusError, ErrorResponse{
-				StatusCode: StatusCodeFromError(err),
-				Type:       err.Type(),
-				Message:    "error from message handler: " + err.Error(),
-			})
-			return
-		}
-
-		respond(StatusSuccess, response)
+			respond(StatusSuccess, response)
 	}
 }
 

@@ -2,6 +2,7 @@ package randx
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/gob"
 	"math/rand/v2"
 	"sync"
@@ -19,6 +20,15 @@ func NewCryptoGenerator() *CryptoGenerator {
 
 func NewCryptoGeneratorFromSeed(seed [32]byte) *CryptoGenerator {
 	return newCryptoGenerator(seed)
+}
+
+func NewCryptoGeneratorFromBase64Seed(seed string) (*CryptoGenerator, error) {
+	seedBytes, err := base64.StdEncoding.DecodeString(seed)
+	if err != nil {
+		return nil, err
+	}
+
+	return newCryptoGenerator([32]byte(seedBytes)), nil
 }
 
 func newCryptoGenerator(seed [32]byte) *CryptoGenerator {
@@ -44,6 +54,10 @@ func (gen *CryptoGenerator) IntUniqueN(low, high, n int64) []int64 {
 		}
 	}
 	return out
+}
+
+func (gen *CryptoGenerator) EncodeSeedBase64() string {
+	return base64.StdEncoding.EncodeToString(gen.Seed[:])
 }
 
 func init() {

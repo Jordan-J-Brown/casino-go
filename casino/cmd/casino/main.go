@@ -31,7 +31,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer app.Shutdown()
+	defer app.Shutdown(ctx)
 
 	<-ctx.Done()
 

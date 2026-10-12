@@ -8,10 +8,11 @@ platform:
 platform-down:
 	docker compose -f ./compose/docker-compose.platform.local.yaml down
 
-# Runs the casino service locally via go run
+run-profile:
+	@set -a; . .env; set +a; go run -tags=profile ./cmd/casino/
+
 run:
-	@PG_CONNECTION_STRING="${pgConnectionString}" \
-	go run ./cmd/service/
+	@set -a; . .env; set +a; go run ./cmd/casino/
 
 generate:
 	go generate ./...
@@ -24,9 +25,6 @@ build:
 		--secret id=GITHUB_TOKEN \
 		--build-arg CONFIG_PATH=configs/config.prod.yaml .
 
-pprof-cpu:
-	@go tool pprof -http : http://localhost:6060/debug/pprof/profile?seconds=15
-
 # Generates swagger docs from godoc comments using the swag-go tool
 swag-init:
 	swag init \
@@ -36,10 +34,10 @@ swag-init:
 
 # --- Testing ---
 test:
-	@go test -tags !integrations ./...
+	@go test -tags !integration ./...
 
-test-integrations:
-	@go test -tags integrations ./...
+test-integration:
+	@go test -tags integration ./...
 
 # --- DATABASE ---
 

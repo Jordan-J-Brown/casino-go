@@ -34,7 +34,7 @@ func New(cfg Config) (*Game, error) {
 	if cfg.GridSize < 2 {
 		return nil, ErrInvalidGridSize
 	}
-	if cfg.Mines < 0 || cfg.Mines >= cfg.GridSize {
+	if cfg.Mines <= 0 || cfg.Mines >= cfg.GridSize {
 		return nil, ErrInvalidMinesCount
 	}
 	if cfg.Bet <= 0 {

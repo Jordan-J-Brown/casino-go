@@ -24,6 +24,7 @@ profile.cov
 go.work
 go.work.sum
 __debug*
+routines.txt
 
 # env file
 .env

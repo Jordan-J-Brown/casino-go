@@ -13,7 +13,7 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/tests/integrations"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/tests/integrations/mockengine"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
-	casinotestclient "github.com/Jordan-J-Brown/casino-go/pkg/casinoclient"
+	"github.com/Jordan-J-Brown/casino-go/pkg/casinoclient"
 	"github.com/Jordan-J-Brown/casino-go/pkg/config"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
@@ -22,6 +22,7 @@ import (
 )
 
 type environment struct {
+	ctx context.Context
 	*integrations.Environment
 	Engine          *mockengine.Engine
 	SessionID       string
@@ -31,7 +32,7 @@ type environment struct {
 
 func (env *environment) Shutdown() {
 	env.Engine.Shutdown()
-	env.CasinoApp.Shutdown()
+	env.CasinoApp.Shutdown(env.ctx)
 }
 
 func setupEnv(ctx context.Context, t *testing.T, engineConfig ...enginemsg.ServerConfig) *environment {
@@ -49,11 +50,12 @@ func setupEnv(ctx context.Context, t *testing.T, engineConfig ...enginemsg.Serve
 	if err != nil {
 		panic(err)
 	}
+	t.Cleanup(engine.Shutdown)
 
 	username := "player-" + rand.Text()[:8]
 
 	balance := int64(1000)
-	authResp, err := casinotestclient.DefaultClient.Auth(requests.Auth{
+	authResp, err := casinoclient.DefaultClient.Auth(requests.Auth{
 		Username: username,
 		Balance:  balance,
 	})
@@ -65,6 +67,7 @@ func setupEnv(ctx context.Context, t *testing.T, engineConfig ...enginemsg.Serve
 	}
 
 	env := &environment{
+		ctx:             ctx,
 		Environment:     baseEnv,
 		Engine:          engine,
 		SessionID:       authResp.Result.SessionID,
@@ -139,7 +142,7 @@ const (
 
 type gameWorker struct {
 	sessionID string
-	client    *casinotestclient.Client
+	client    *casinoclient.Client
 	errs      chan<- error
 	steps     []gameStep
 }

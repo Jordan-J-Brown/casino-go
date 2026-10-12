@@ -1,7 +1,12 @@
 package requests
 
 type PlayRequest struct {
-	Mines int `json:"mines"`
+	Mines int      `json:"mines"`
+	Dev   *DevData `json:"dev,omitzero"`
+}
+
+type DevData struct {
+	Seed string `json:"seed"`
 }
 
 type NextRequest struct {

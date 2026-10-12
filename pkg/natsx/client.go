@@ -13,6 +13,7 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+// [Client.Close] must be called upon shutdown to properly drain all connections.
 type Client struct {
 	contentType   string
 	retry         int
@@ -20,13 +21,18 @@ type Client struct {
 	retryMaxDelay time.Duration
 	timeout       time.Duration
 	header        nats.Header
-	nc            *nats.Conn
+	ncpool        *ConnPool
 }
 
-func NewClient(nc *nats.Conn) *Client {
-	return &Client{
-		nc: nc,
+func NewClient(ctx context.Context, poolConfig ConnPoolConfig) (*Client, error) {
+	pool, err := NewConnPool(ctx, poolConfig)
+	if err != nil {
+		return nil, err
 	}
+
+	return &Client{
+		ncpool: pool,
+	}, nil
 }
 
 func (c *Client) SetContentType(ct string) *Client {
@@ -55,7 +61,7 @@ func (c *Client) R() *Request {
 	header := make(nats.Header, len(c.header))
 	maps.Copy(header, c.header)
 	return &Request{
-		nc:            c.nc,
+		nc:            c.ncpool,
 		contentType:   c.contentType,
 		retry:         c.retry,
 		retryDelay:    c.retryDelay,
@@ -65,8 +71,12 @@ func (c *Client) R() *Request {
 	}
 }
 
+func (c *Client) Close() error {
+	return c.ncpool.Close()
+}
+
 type Request struct {
-	nc            *nats.Conn
+	nc            *ConnPool
 	isError       bool
 	contentType   string
 	retry         int
@@ -164,7 +174,7 @@ func (r *Request) Exec(ctx context.Context, subject string) (*Request, error) {
 	var replyErr error
 	if r.retry > 0 {
 		replyErr = retry.Backoff(ctx, r.retry, r.retryDelay, r.retryMaxDelay, func(ctx context.Context) error {
-			reply, replyErr = r.nc.RequestMsg(&nats.Msg{
+			reply, replyErr = r.nc.RequestMsg(ctx, &nats.Msg{
 				Subject: subject,
 				Header:  r.header,
 				Data:    bodyBytes,
@@ -172,7 +182,7 @@ func (r *Request) Exec(ctx context.Context, subject string) (*Request, error) {
 			return replyErr
 		})
 	} else {
-		reply, replyErr = r.nc.RequestMsg(&nats.Msg{
+		reply, replyErr = r.nc.RequestMsg(ctx, &nats.Msg{
 			Subject: subject,
 			Header:  r.header,
 			Data:    bodyBytes,
