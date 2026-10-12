@@ -15,7 +15,7 @@ import (
 type Session struct {
 	client    *casinoclient.Client
 	logger    logsx.Logger
-	hooks     games.Controller
+	controller     games.Controller
 	engineID  string
 	sessionID string
 
@@ -67,7 +67,7 @@ func New(ctx context.Context, cfg Config) (*Session, error) {
 	return &Session{
 		client:    cfg.Client,
 		logger:    cfg.Logger,
-		hooks:     cfg.GameController,
+		controller:     cfg.GameController,
 		engineID:  cfg.EngineID,
 		sessionID: authRes.Result.SessionID,
 		username:  username,
@@ -81,17 +81,17 @@ func (session *Session) RunGame(ctx context.Context, bet int64) error {
 		return err
 	}
 
-	if err := session.hooks.ParseRound(ctx, games.GameStatePlay, round); err != nil {
+	if err := session.controller.ParseRound(ctx, games.GameStatePlay, round); err != nil {
 		return err
 	}
 
-	for !session.hooks.GameIsClosed(ctx) {
+	for !session.controller.GameIsClosed(ctx) {
 		round, err = session.Next(ctx)
 		if err != nil {
 			return err
 		}
 
-		if err := session.hooks.ParseRound(ctx, games.GameStateNext, round); err != nil {
+		if err := session.controller.ParseRound(ctx, games.GameStateNext, round); err != nil {
 			return err
 		}
 	}
@@ -101,7 +101,7 @@ func (session *Session) RunGame(ctx context.Context, bet int64) error {
 		return err
 	}
 
-	session.hooks.Reset(ctx)
+	session.controller.Reset(ctx)
 
 	return nil
 }
@@ -111,7 +111,7 @@ func (session *Session) Play(ctx context.Context, bet int64) (*responses.Round, 
 		return nil, errorx.Newf("invalid game state: ")
 	}
 
-	gameData, err := session.hooks.GetPlayGameData(ctx)
+	gameData, err := session.controller.GetPlayGameData(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (session *Session) Play(ctx context.Context, bet int64) (*responses.Round, 
 }
 
 func (session *Session) Next(ctx context.Context) (*responses.Round, error) {
-	gameData, err := session.hooks.GetNextGameData(ctx)
+	gameData, err := session.controller.GetNextGameData(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func (session *Session) Next(ctx context.Context) (*responses.Round, error) {
 }
 
 func (session *Session) Close(ctx context.Context) (*responses.Close, error) {
-	if !session.hooks.GameIsClosed(ctx) {
+	if !session.controller.GameIsClosed(ctx) {
 		return nil, ErrGameNotClosed
 	}
 
