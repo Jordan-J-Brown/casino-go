@@ -48,7 +48,14 @@ func StartServer(
 ) (*Server, error) {
 	const engineQ = "engines"
 
-	client := natsx.NewClient(nc).
+	client, err := natsx.NewClient(ctx, natsx.ConnPoolConfig{
+		URL: nc.ConnectedAddr(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	client.
 		SetContentType(mimex.ContentTypeJSON).
 		SetRetry(3, 100*time.Millisecond, 3*time.Second).
 		SetTimeout(3 * time.Second)
@@ -104,10 +111,15 @@ func StartServer(
 		nc:     nc,
 		logger: logger,
 		cfg:    cfg,
+		client: client,
 	}, nil
 }
 
 func (server *Server) Shutdown(ctx context.Context) error {
+	if err := server.client.Close(); err != nil {
+		server.logger.ErrorContext(ctx, "failed to close natsx client", "error", err)
+	}
+
 	for _, sub := range server.subs {
 		err := sub.Drain()
 		if err != nil {
