@@ -31,7 +31,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer engine.Shutdown()
+	defer engine.Shutdown(ctx)
 
 	logger.InfoContext(ctx, "Engine running...")
 
