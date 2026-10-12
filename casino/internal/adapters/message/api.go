@@ -2,6 +2,7 @@ package message
 
 import (
 	"context"
+	"time"
 
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/engineregistry"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
@@ -9,6 +10,7 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/pkg/msg/casinomsg"
 	"github.com/Jordan-J-Brown/casino-go/pkg/msg/enginemsg"
 	"github.com/Jordan-J-Brown/casino-go/pkg/natsx"
+	"github.com/Jordan-J-Brown/casino-go/pkg/retry"
 	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -49,6 +51,10 @@ func RunApiAsync(
 		return nil, err
 	}
 	api.subs = append(api.subs, healthSub)
+
+	retry.Backoff(ctx, 3, time.Second, 10*time.Second, func(ctx context.Context) error {
+		return nc.Publish(enginemsg.SubjectEnginesRegisterBroadcast, nil)
+	})
 
 	return api, nil
 }

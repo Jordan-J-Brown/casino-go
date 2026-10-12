@@ -8,7 +8,6 @@ import (
 
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/mimex"
-	"github.com/Jordan-J-Brown/casino-go/pkg/msg/casinomsg"
 	"github.com/Jordan-J-Brown/casino-go/pkg/natsx"
 	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel"
@@ -73,6 +72,19 @@ func StartServer(
 		return nil, err
 	}
 
+	registerBcSub, err := nc.Subscribe(SubjectEnginesRegisterBroadcast, func(msg *nats.Msg) {
+		server.logger.DebugContext(ctx, "Registering engine from broadcast")
+
+		registerErr := server.registerEngine(ctx)
+		if registerErr != nil {
+			server.logger.ErrorContext(ctx, "failed to register engine after broadcast", "error", err)
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	server.subs = append(server.subs, registerBcSub)
+
 	setupSub, err := nc.QueueSubscribe(
 		CreateEngineSubject(cfg.EngineID, "setup"), engineQ, natsx.HandleRPC(ctx, logger, tracer, cfg.SetupHandler),
 	)
@@ -104,8 +116,6 @@ func StartServer(
 		return nil, err
 	}
 	server.subs = append(server.subs, closeSub)
-
-	go server.startHealthChecks(ctx)
 
 	return &Server{
 		nc:     nc,
@@ -170,45 +180,6 @@ func (server *Server) registerEngine(ctx context.Context) (err error) {
 	}
 
 	return nil
-}
-
-func (server *Server) checkCasinoHealth(ctx context.Context) error {
-	server.logger.DebugContext(ctx, "Checking casino health...")
-	_, err := server.client.R().Exec(ctx, casinomsg.SubjectHealth)
-	if err == nil {
-		server.logger.DebugContext(ctx, "Casino is healthy")
-	}
-	return err
-}
-
-func (server *Server) startHealthChecks(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-
-	var lostConnection bool
-	for {
-		select {
-		case <-ticker.C:
-			err := server.checkCasinoHealth(ctx)
-			if err != nil {
-				server.logger.ErrorContext(ctx, "failed to check casino health", "error", err)
-				lostConnection = true
-			}
-
-			if lostConnection {
-				server.logger.DebugContext(ctx, "Attempting to re-register engine...")
-				err = server.registerEngine(ctx)
-				if err != nil {
-					server.logger.ErrorContext(ctx, "failed to re-register engine after disconnect", err)
-					continue
-				}
-
-				lostConnection = false
-			}
-		case <-ctx.Done():
-			return
-		}
-	}
 }
 
 func CreateEngineSubject(engineID, action string) string {
