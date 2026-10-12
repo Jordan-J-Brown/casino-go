@@ -242,7 +242,7 @@ func startCasino(
 	}
 	defer func() {
 		if err != nil {
-			app.Shutdown()
+			app.Shutdown(ctx)
 		}
 	}()
 

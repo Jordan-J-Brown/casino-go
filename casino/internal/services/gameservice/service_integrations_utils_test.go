@@ -22,6 +22,7 @@ import (
 )
 
 type environment struct {
+	ctx context.Context
 	*integrations.Environment
 	Engine          *mockengine.Engine
 	SessionID       string
@@ -31,7 +32,7 @@ type environment struct {
 
 func (env *environment) Shutdown() {
 	env.Engine.Shutdown()
-	env.CasinoApp.Shutdown()
+	env.CasinoApp.Shutdown(env.ctx)
 }
 
 func setupEnv(ctx context.Context, t *testing.T, engineConfig ...enginemsg.ServerConfig) *environment {
@@ -49,6 +50,7 @@ func setupEnv(ctx context.Context, t *testing.T, engineConfig ...enginemsg.Serve
 	if err != nil {
 		panic(err)
 	}
+	t.Cleanup(engine.Shutdown)
 
 	username := "player-" + rand.Text()[:8]
 
@@ -65,6 +67,7 @@ func setupEnv(ctx context.Context, t *testing.T, engineConfig ...enginemsg.Serve
 	}
 
 	env := &environment{
+		ctx:             ctx,
 		Environment:     baseEnv,
 		Engine:          engine,
 		SessionID:       authResp.Result.SessionID,

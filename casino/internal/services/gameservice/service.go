@@ -16,6 +16,7 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/msg/enginemsg"
 	"github.com/shopspring/decimal"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Service interface {
@@ -102,10 +103,10 @@ func (service *service) Setup(ctx context.Context, request SetupRequest) (*Setup
 }
 
 func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundResult, *errorx.Error) {
-	if !service.gameLocker.tryLockGameForAction(actionPlay, request.User.ID, request.EngineID) {
+	if !service.gameLocker.tryLockGameForAction(request.User.ID, request.EngineID) {
 		return nil, errorx.NewFromType(string(gamemodels.ErrTooManyRequests), errorx.WithCode(errorx.ClientError))
 	}
-	defer service.gameLocker.unlockGame(actionPlay, request.User.ID, request.EngineID)
+	defer service.gameLocker.unlockGame(request.User.ID, request.EngineID)
 
 	bets, err := service.getBetsForEngine(ctx, request.EngineID)
 	if err != nil {
@@ -179,10 +180,12 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 }
 
 func (service *service) Next(ctx context.Context, request NextRequest) (*RoundResult, *errorx.Error) {
-	if !service.gameLocker.tryLockGameForAction(actionNext, request.User.ID, request.EngineID) {
+	span := trace.SpanFromContext(ctx)
+
+	if !service.gameLocker.tryLockGameForAction(request.User.ID, request.EngineID) {
 		return nil, errorx.NewFromType(string(gamemodels.ErrTooManyRequests), errorx.WithCode(errorx.ClientError))
 	}
-	defer service.gameLocker.unlockGame(actionNext, request.User.ID, request.EngineID)
+	defer service.gameLocker.unlockGame(request.User.ID, request.EngineID)
 
 	_, err := service.getEngineReg(ctx, request.EngineID)
 	if err != nil {
@@ -191,6 +194,8 @@ func (service *service) Next(ctx context.Context, request NextRequest) (*RoundRe
 
 	var result *RoundResult
 	storeErr := service.StoreProvider.UseStore(ctx, func(store CasinoGameStore) error {
+		span.AddEvent("Loading game")
+
 		game, err := store.LoadGame(ctx, request.User.ID, request.EngineID)
 		if err != nil && err != gamemodels.ErrGameNotFound {
 			return err
@@ -198,6 +203,8 @@ func (service *service) Next(ctx context.Context, request NextRequest) (*RoundRe
 		if game == nil {
 			return errorx.NewFromType(string(gamemodels.ErrGameNotFound), errorx.WithCode(errorx.ClientError))
 		}
+
+		span.AddEvent("Game loaded")
 
 		wallet, err := store.GetWallet(ctx, request.User.WalletID)
 		if err != nil {
@@ -208,6 +215,8 @@ func (service *service) Next(ctx context.Context, request NextRequest) (*RoundRe
 			return errorx.NewFromType(string(gamemodels.ErrNextUnavailable), errorx.WithCode(errorx.ClientError))
 		}
 
+		span.AddEvent("Retrieving next response")
+
 		response, nextErr := service.EngineClient.Next(ctx, request.EngineID, enginemsg.NextRequest{
 			State:    game.PrivateState,
 			MetaData: request.MetaData,
@@ -215,15 +224,22 @@ func (service *service) Next(ctx context.Context, request NextRequest) (*RoundRe
 		if nextErr != nil {
 			return nextErr
 		}
+
+		span.AddEvent("Retreived next response")
+
 		game.PrivateState = response.PrivateState
 		game.PublicState = response.PublicState
 		payoutMultiplier, _ := service.capPayoutMultiplier(response.PayoutMultiplier)
 		game.PayoutMultiplier = payoutMultiplier
 
+		span.AddEvent("Saving game")
+
 		err = store.SaveGame(ctx, game)
 		if err != nil {
 			return err
 		}
+
+		span.AddEvent("Game saved")
 
 		result = &RoundResult{
 			Balance:          wallet.BalanceMinor,
@@ -245,10 +261,10 @@ func (service *service) Next(ctx context.Context, request NextRequest) (*RoundRe
 }
 
 func (service *service) Close(ctx context.Context, request CloseRequest) (*CloseResult, *errorx.Error) {
-	if !service.gameLocker.tryLockGameForAction(actionClose, request.User.ID, request.EngineID) {
+	if !service.gameLocker.tryLockGameForAction(request.User.ID, request.EngineID) {
 		return nil, errorx.NewFromType(string(gamemodels.ErrTooManyRequests), errorx.WithCode(errorx.ClientError))
 	}
-	defer service.gameLocker.unlockGame(actionClose, request.User.ID, request.EngineID)
+	defer service.gameLocker.unlockGame(request.User.ID, request.EngineID)
 
 	var result *CloseResult
 	transactErr := service.StoreProvider.UseStore(ctx, func(store CasinoGameStore) error {
@@ -419,30 +435,20 @@ func (service *service) getPublicStatePayoutMultiplier(multiplier decimal.Decima
 	return multiplier.StringFixedBank(2)
 }
 
-type gameAction int
-
-const (
-	actionPlay gameAction = iota
-	actionNext
-	actionClose
-)
-
 type gameLocker struct {
-	actionLocks [3]sync.Mutex
-	gameLocks   map[string]struct{}
+	mu        sync.Mutex
+	gameLocks map[string]struct{}
 }
 
 func newGameLocker() *gameLocker {
 	return &gameLocker{
-		actionLocks: [3]sync.Mutex{},
-		gameLocks:   make(map[string]struct{}),
+		gameLocks: make(map[string]struct{}),
 	}
 }
 
-func (g *gameLocker) tryLockGameForAction(action gameAction, userID, engineID string) (locked bool) {
-	mu := &g.actionLocks[action]
-	mu.Lock()
-	defer mu.Unlock()
+func (g *gameLocker) tryLockGameForAction(userID, engineID string) (locked bool) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
 	key := userID + ":" + engineID
 	_, exists := g.gameLocks[key]
@@ -455,10 +461,9 @@ func (g *gameLocker) tryLockGameForAction(action gameAction, userID, engineID st
 	return true
 }
 
-func (g *gameLocker) unlockGame(action gameAction, userID, engineID string) {
-	mu := &g.actionLocks[action]
-	mu.Lock()
-	defer mu.Unlock()
+func (g *gameLocker) unlockGame(userID, engineID string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
 	key := userID + ":" + engineID
 

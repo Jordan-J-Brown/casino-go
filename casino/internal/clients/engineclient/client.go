@@ -2,6 +2,8 @@ package engineclient
 
 import (
 	"context"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/Jordan-J-Brown/casino-go/pkg/contextx"
@@ -15,11 +17,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const (
+	EnvEngineClientMaxConns = "ENGINE_CLIENT_MAX_CONNS"
+)
+
 type Client interface {
 	Setup(ctx context.Context, engineID string, request enginemsg.SetupRequest) (*enginemsg.SetupResponse, *errorx.Error)
 	Play(ctx context.Context, engineID string, request enginemsg.PlayRequest) (*enginemsg.RoundResponse, *errorx.Error)
 	Next(ctx context.Context, engineID string, request enginemsg.NextRequest) (*enginemsg.RoundResponse, *errorx.Error)
 	Close(ctx context.Context, engineID string, request enginemsg.CloseRequest) (*enginemsg.CloseResponse, *errorx.Error)
+	Shutdown(ctx context.Context) error
 }
 
 type client struct {
@@ -29,11 +36,30 @@ type client struct {
 }
 
 func New(
+	ctx context.Context,
 	nc *nats.Conn,
 	tracer trace.Tracer,
 	timeout time.Duration,
-) Client {
-	nclient := natsx.NewClient(nc).
+) (Client, error) {
+	var maxConns int
+	maxConnStr, ok := os.LookupEnv(EnvEngineClientMaxConns)
+	if ok {
+		value, err := strconv.ParseInt(maxConnStr, 10, 64)
+		if err != nil {
+			return nil, errorx.Newf("failed to parse environment variable %s.", EnvEngineClientMaxConns, errorx.WithChildren(err))
+		}
+		maxConns = int(value)
+	}
+
+	nclient, err := natsx.NewClient(ctx, natsx.ConnPoolConfig{
+		URL:      nc.ConnectedAddr(),
+		MaxConns: maxConns,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	nclient.
 		SetContentType(mimex.ContentTypeJSON).
 		SetRetry(3, time.Millisecond*100, time.Second).
 		SetTimeout(3 * time.Second)
@@ -43,7 +69,8 @@ func New(
 		nclient: nclient,
 		timeout: timeout,
 	}
-	return client
+
+	return client, nil
 }
 
 func (c *client) Setup(ctx context.Context, engineID string, request enginemsg.SetupRequest) (*enginemsg.SetupResponse, *errorx.Error) {
@@ -124,6 +151,10 @@ func (c *client) Close(ctx context.Context, engineID string, request enginemsg.C
 	}
 
 	return &response, nil
+}
+
+func (c *client) Shutdown(ctx context.Context) error {
+	return c.nclient.Close()
 }
 
 func (c *client) getHeaders(ctx context.Context) nats.Header {
