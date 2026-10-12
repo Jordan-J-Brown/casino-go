@@ -34,10 +34,10 @@ swag-init:
 
 # --- Testing ---
 test:
-	@go test -tags !integrations ./...
+	@go test -tags !integration ./...
 
-test-integrations:
-	@go test -tags integrations ./...
+test-integration:
+	@go test -tags integration ./...
 
 # --- DATABASE ---
 
