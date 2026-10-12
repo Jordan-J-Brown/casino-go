@@ -1,4 +1,4 @@
-package casinosession
+package games
 
 import "fmt"
 

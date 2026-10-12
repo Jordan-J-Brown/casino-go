@@ -2,20 +2,20 @@ package casinosession
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/responses"
 	"github.com/Jordan-J-Brown/casino-go/pkg/casinoclient"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
+	"github.com/Jordan-J-Brown/casino-go/stress-test/internal/games"
 	"github.com/shopspring/decimal"
 )
 
 type Session struct {
 	client    *casinoclient.Client
 	logger    logsx.Logger
-	hooks     GameHooks
+	hooks     games.Controller
 	engineID  string
 	sessionID string
 
@@ -23,22 +23,23 @@ type Session struct {
 	balance   int64
 	payout    decimal.Decimal
 	lastRound *responses.Round
-	state     GameState
+	state     games.GameState
 }
 
-func New(
-	ctx context.Context,
-	engineID string,
-	balance int64,
-	client *casinoclient.Client,
-	logger logsx.Logger,
-	hooks GameHooks,
-) (*Session, error) {
+type Config struct {
+	EngineID       string
+	Balance        int64
+	Client         *casinoclient.Client
+	Logger         logsx.Logger
+	GameController games.Controller
+}
+
+func New(ctx context.Context, cfg Config) (*Session, error) {
 	username := generateUsername()
 
-	authRes, err := client.Auth(requests.Auth{
+	authRes, err := cfg.Client.Auth(requests.Auth{
 		Username: username,
-		Balance:  balance,
+		Balance:  cfg.Balance,
 	})
 	if err != nil {
 		return nil, err
@@ -47,9 +48,9 @@ func New(
 		return nil, &authRes.Error
 	}
 
-	setupRes, err := client.Setup(requests.Setup{
+	setupRes, err := cfg.Client.Setup(requests.Setup{
 		SessionID: authRes.Result.SessionID,
-		GameID:    engineID,
+		GameID:    cfg.EngineID,
 		MetaData:  nil,
 	})
 	if err != nil {
@@ -59,18 +60,18 @@ func New(
 		return nil, &setupRes.Error
 	}
 
-	if err := hooks.ProcessSetup(ctx, setupRes.Result); err != nil {
+	if err := cfg.GameController.ProcessSetup(ctx, setupRes.Result); err != nil {
 		return nil, err
 	}
 
 	return &Session{
-		client:    client,
-		logger:    logger,
-		hooks:     hooks,
-		engineID:  engineID,
+		client:    cfg.Client,
+		logger:    cfg.Logger,
+		hooks:     cfg.GameController,
+		engineID:  cfg.EngineID,
 		sessionID: authRes.Result.SessionID,
 		username:  username,
-		balance:   balance,
+		balance:   cfg.Balance,
 	}, nil
 }
 
@@ -80,7 +81,7 @@ func (session *Session) RunGame(ctx context.Context, bet int64) error {
 		return err
 	}
 
-	if err := session.hooks.ParseRound(ctx, GameStatePlay, round); err != nil {
+	if err := session.hooks.ParseRound(ctx, games.GameStatePlay, round); err != nil {
 		return err
 	}
 
@@ -90,7 +91,7 @@ func (session *Session) RunGame(ctx context.Context, bet int64) error {
 			return err
 		}
 
-		if err := session.hooks.ParseRound(ctx, GameStateNext, round); err != nil {
+		if err := session.hooks.ParseRound(ctx, games.GameStateNext, round); err != nil {
 			return err
 		}
 	}
@@ -106,7 +107,7 @@ func (session *Session) RunGame(ctx context.Context, bet int64) error {
 }
 
 func (session *Session) Play(ctx context.Context, bet int64) (*responses.Round, error) {
-	if session.state != GameStateReady && session.state != GameStateClosed {
+	if session.state != games.GameStateReady && session.state != games.GameStateClosed {
 		return nil, errorx.Newf("invalid game state: ")
 	}
 
@@ -136,7 +137,7 @@ func (session *Session) Play(ctx context.Context, bet int64) (*responses.Round, 
 	session.balance = r.Result.Balance
 	session.payout = payout
 	session.lastRound = &r.Result
-	session.state = GameStatePlay
+	session.state = games.GameStatePlay
 
 	return &r.Result, nil
 }
@@ -167,7 +168,7 @@ func (session *Session) Next(ctx context.Context) (*responses.Round, error) {
 	session.balance = r.Result.Balance
 	session.payout = payout
 	session.lastRound = &r.Result
-	session.state = GameStateNext
+	session.state = games.GameStateNext
 
 	return &r.Result, nil
 }
@@ -189,18 +190,7 @@ func (session *Session) Close(ctx context.Context) (*responses.Close, error) {
 	}
 
 	session.balance = r.Result.Balance
-	session.state = GameStateClosed
+	session.state = games.GameStateClosed
 
 	return &r.Result, nil
-}
-
-type GameHooks interface {
-	ProcessSetup(ctx context.Context, setup responses.Setup) error
-	GetPlayGameData(ctx context.Context) (json.RawMessage, error)
-	ParseRound(ctx context.Context, state GameState, round *responses.Round) error
-
-	//All methods below will be called after ParseRound
-	GameIsClosed(ctx context.Context) bool
-	GetNextGameData(ctx context.Context) (json.RawMessage, error)
-	Reset(ctx context.Context)
 }

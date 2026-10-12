@@ -14,3 +14,5 @@ require (
 	github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261005175900-651c4fdd3bd8
 	github.com/shopspring/decimal v1.5.0
 )
+
+require github.com/alecthomas/kong v1.16.1 // indirect
