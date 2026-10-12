@@ -13,11 +13,11 @@ import (
 )
 
 type Session struct {
-	client    *casinoclient.Client
-	logger    logsx.Logger
-	controller     games.Controller
-	engineID  string
-	sessionID string
+	client     *casinoclient.Client
+	logger     logsx.Logger
+	controller games.Controller
+	engineID   string
+	sessionID  string
 
 	username  string
 	balance   int64
@@ -65,13 +65,13 @@ func New(ctx context.Context, cfg Config) (*Session, error) {
 	}
 
 	return &Session{
-		client:    cfg.Client,
-		logger:    cfg.Logger,
-		controller:     cfg.GameController,
-		engineID:  cfg.EngineID,
-		sessionID: authRes.Result.SessionID,
-		username:  username,
-		balance:   cfg.Balance,
+		client:     cfg.Client,
+		logger:     cfg.Logger,
+		controller: cfg.GameController,
+		engineID:   cfg.EngineID,
+		sessionID:  authRes.Result.SessionID,
+		username:   username,
+		balance:    cfg.Balance,
 	}, nil
 }
 
@@ -108,7 +108,7 @@ func (session *Session) RunGame(ctx context.Context, bet int64) error {
 
 func (session *Session) Play(ctx context.Context, bet int64) (*responses.Round, error) {
 	if session.state != games.GameStateReady && session.state != games.GameStateClosed {
-		return nil, errorx.Newf("invalid game state: ")
+		return nil, errorx.Newf("invalid game state: %s", session.state)
 	}
 
 	gameData, err := session.controller.GetPlayGameData(ctx)
