@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	_ "github.com/Jordan-J-Brown/casino-go/casino/docs"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web/handlers/authhandler"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web/handlers/gamehandler"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web/handlers/userhandler"
@@ -19,7 +20,6 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"go.opentelemetry.io/otel/trace"
-	_ "github.com/Jordan-J-Brown/casino-go/casino/docs"
 )
 
 // @title Casino API
@@ -51,7 +51,7 @@ func RunApiAsync(ctx context.Context, cfg ApiConfig) (shutdownFn func(ctx contex
 	router := chi.NewRouter()
 
 	router.Use(
-		chimiddleware.Logger, //TODO: use the application's logger
+		// chimiddleware.Logger, //TODO: use the application's logger
 		chimiddleware.RequestID,
 		middleware.CorrelationID,
 		chimiddleware.Recoverer,
