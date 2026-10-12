@@ -8,6 +8,12 @@ This project is an online casino/Remote Game Server (RGS) built in Golang. Engin
 
 This is just a portfolio/hobby project and does not represent a production worthy RGS. It serves as a place to demonstrate the knowledge and skills I have obtained building backend services using Golang.
 
+### Projects
+- `./casino` - Casino project that handles the core functionality. 
+- `./engines/mines` - A simple example of a mines engine.
+- `./pkg` - Shared code for all projects to use.
+- `./stress-test` - CLI application that stress tests the casino concurrently with a single engine.
+
 ### Features
 - REST API to authenticate and play games.
 - Swagger docs and swagger endpoint.
@@ -47,10 +53,10 @@ Add this config to .vscode/launch.json:
     "request": "launch",
     "mode": "auto",
     "cwd": "${workspaceRoot}/casino",
-    "program": "${workspaceRoot}/casino/cmd/service/main.go",
+    "program": "${workspaceRoot}/casino/cmd/casino/main.go",
     "buildFlags": [ //These build flags are optional. They enable the profiling endpoints to be registered.
       "-tags",
-      "local"
+      "profile"
     ],
     "envFile": "/Users/jordanbrownwork/personal/casino-go/casino/.env"
   }
@@ -62,7 +68,7 @@ Add these settings to your JSON. This configures gopls correctly for the build t
 {
   "gopls": {
     "build.buildFlags": [
-      "-tags=local,integration"
+      "-tags=profile,integration"
     ]
   },
   "go.testTags": "integration",
