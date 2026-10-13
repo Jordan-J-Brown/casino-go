@@ -7,5 +7,5 @@ const (
 	SubjectEnginesPlay              = "engines.*.play"
 	SubjectEnginesNext              = "engines.*.next"
 	SubjectEnginesClose             = "engines.*.close"
-	SubjectEnginesRegisterBroadcast = "engines.broadcast.register"
+	SubjectEnginesRegisterBroadcast = "broadcast.engines.register"
 )
