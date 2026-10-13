@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
-	"github.com/Jordan-J-Brown/casino-go/casino/pkg/responses"
+	"github.com/Jordan-J-Brown/casino-go/pkg/casino/requests"
+	"github.com/Jordan-J-Brown/casino-go/pkg/casino/responses"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 )
 

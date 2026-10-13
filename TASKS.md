@@ -1,3 +1,0 @@
-# TASKS
-
-- Document architecture

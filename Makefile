@@ -1,3 +1,12 @@
+tidy:
+	@dirs=(./casino ./pkg ./engines/mines); \
+	currentDir=$$(pwd); \
+	for dir in $${dirs[@]}; do \
+		cd "$$dir"; \
+		go mod tidy; \
+		cd "$$currentDir"; \
+	done
+
 pprof-cpu:
 	@go tool pprof -http : http://localhost:6060/debug/pprof/profile?seconds=15
 

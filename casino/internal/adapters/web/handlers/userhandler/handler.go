@@ -6,7 +6,7 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/adapters/web/handlers/basehandler"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/domain/usermodels"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/userservice"
-	"github.com/Jordan-J-Brown/casino-go/casino/pkg/responses"
+	"github.com/Jordan-J-Brown/casino-go/pkg/casino/responses"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"go.opentelemetry.io/otel/trace"
 )

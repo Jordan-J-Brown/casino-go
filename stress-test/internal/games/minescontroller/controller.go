@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/Jordan-J-Brown/casino-go/casino/pkg/responses"
 	minesrequests "github.com/Jordan-J-Brown/casino-go/engines/mines/pkg/requests"
 	minesresponses "github.com/Jordan-J-Brown/casino-go/engines/mines/pkg/responses"
+	"github.com/Jordan-J-Brown/casino-go/pkg/casino/responses"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"github.com/Jordan-J-Brown/casino-go/stress-test/internal/games"
 )

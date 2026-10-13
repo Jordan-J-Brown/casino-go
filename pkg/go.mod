@@ -3,7 +3,6 @@ module github.com/Jordan-J-Brown/casino-go/pkg
 go 1.27
 
 require (
-	github.com/Jordan-J-Brown/casino-go/casino v0.0.0-20261005175900-651c4fdd3bd8
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/nats-io/nats.go v1.53.1

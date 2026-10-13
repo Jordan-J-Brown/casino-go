@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Jordan-J-Brown/casino-go/pkg/casinoclient"
+	"github.com/Jordan-J-Brown/casino-go/pkg/casino/casinoclient"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/ternary"
 	"github.com/Jordan-J-Brown/casino-go/stress-test/internal/cli"

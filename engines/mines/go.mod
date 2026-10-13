@@ -2,10 +2,10 @@ module github.com/Jordan-J-Brown/casino-go/engines/mines
 
 go 1.27.1
 
-replace github.com/Jordan-J-Brown/casino-go/pkg => ../../pkg
+// replace github.com/Jordan-J-Brown/casino-go/pkg => ../../pkg
 
 require (
-	github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-00010101000000-000000000000
+	github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013140405-72fd91bdecb0
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/viper v1.21.0
 )

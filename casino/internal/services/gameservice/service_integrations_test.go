@@ -9,8 +9,8 @@ import (
 
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/domain/gamemodels"
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/tests/integrations/mockengine"
-	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
-	"github.com/Jordan-J-Brown/casino-go/pkg/casinoclient"
+	"github.com/Jordan-J-Brown/casino-go/pkg/casino/casinoclient"
+	"github.com/Jordan-J-Brown/casino-go/pkg/casino/requests"
 	"github.com/Jordan-J-Brown/casino-go/pkg/chans"
 	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/msg/enginemsg"
