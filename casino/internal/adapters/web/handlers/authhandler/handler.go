@@ -64,8 +64,12 @@ func (h *Handler) Authenticate(w http.ResponseWriter, r *http.Request) {
 		var err *errorx.Error
 		user, err = h.userService.CreateUserWithBalance(ctx, request.Username, request.Balance)
 		if err != nil {
-			h.Logger.ErrorContext(ctx, "failed to create user", "error", err)
+			if err.Type() != string(usermodels.ErrUsernameExists) {
+				h.Logger.ErrorContext(ctx, "failed to create user", "error", err)
+			}
+
 			h.HandleError(ctx, w, err)
+
 			return
 		}
 	} else {

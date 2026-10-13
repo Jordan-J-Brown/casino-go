@@ -131,6 +131,9 @@ func (s *service) CreateUserWithBalance(ctx context.Context, username string, ba
 		return err
 	})
 	if storeErr != nil {
+		if storeErr == usermodels.ErrUsernameExists {
+			return nil, errorx.NewFromType(string(usermodels.ErrUsernameExists), errorx.WithCode(errorx.ClientError))
+		}
 		return nil, errorx.NewFromError(storeErr)
 	}
 
