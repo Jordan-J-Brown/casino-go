@@ -114,7 +114,7 @@ func (service *service) Play(ctx context.Context, request PlayRequest) (*RoundRe
 	}
 
 	if !slices.Contains(bets, request.Bet) {
-		return nil, errorx.NewFromError(gamemodels.ErrInvalidBet)
+		return nil, errorx.NewFromType(string(gamemodels.ErrInvalidBet), errorx.WithCode(errorx.ClientError))
 	}
 
 	var result *RoundResult
