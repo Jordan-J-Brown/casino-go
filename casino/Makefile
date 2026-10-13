@@ -4,7 +4,7 @@ platform:
 
 # Decomposes the platform that the casino needs
 platform-down:
-	docker compose -f ./compose/docker-compose.platform.local.yaml down
+	@docker compose -f ./compose/docker-compose.platform.local.yaml down
 
 run-profile:
 	@set -a; . .env; set +a; go run -tags=profile ./cmd/casino/
@@ -13,7 +13,7 @@ run:
 	@set -a; . .env; set +a; go run ./cmd/casino/
 
 generate:
-	go generate ./...
+	@go generate ./...
 
 build: 
 	@GITHUB_TOKEN=$$GITHUB_TOKEN \
@@ -22,11 +22,11 @@ build:
 		--build-arg CONFIG_PATH=configs/config.prod.yaml .
 
 compose-casino:
-	docker compose -f compose/docker-compose.casino.local.yaml up -d
+	@docker compose -f compose/docker-compose.casino.local.yaml up -d
 
 # Generates swagger docs from godoc comments using the swag-go tool
 swag-init:
-	swag init \
+	@swag init \
 		--parseInternal \
 		--parseDependency \
 		--dir ./internal/adapters/web,pkg
@@ -46,7 +46,7 @@ psql:
 
 name :=
 migration:
-	migrate create -ext .sql -dir ./migrations -seq -digits 4 ${name}
+	@migrate create -ext .sql -dir ./migrations -seq -digits 4 ${name}
 
 migrate-up:
 	@if ! command -v migrate >/dev/null 2>&1; then \
