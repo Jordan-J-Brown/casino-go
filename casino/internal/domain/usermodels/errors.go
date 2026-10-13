@@ -7,12 +7,11 @@ func (err Error) Error() string {
 }
 
 const (
-	ErrUsernameExists   = Error("username exists")
-	ErrInvalidUsername  = Error("invalid username")
-	ErrUsernameTaken    = Error("username is taken")
-	ErrInvalidBalance   = Error("invalid balance")
-	ErrUserNotFound     = Error("user not found")
-	ErrSessionExists    = Error("user session exists")
-	ErrBadArgs          = Error("bad arguments")
-	ErrInvalidSessionID = Error("invalid session ID")
+	ErrUsernameExists   = Error("ERR_USERNAME_EXISTS")
+	ErrInvalidUsername  = Error("ERR_INVALID_USERNAME")
+	ErrInvalidBalance   = Error("ERR_INVALID_BALANCE")
+	ErrUserNotFound     = Error("ERR_USER_NOT_FOUND")
+	ErrSessionExists    = Error("ERR_SESSION_EXISTS")
+	ErrBadArgs          = Error("ERR_BAD_ARGS")
+	ErrInvalidSessionID = Error("ERR_INVALID_SESSION_ID")
 )
