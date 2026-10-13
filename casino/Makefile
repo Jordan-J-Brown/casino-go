@@ -1,5 +1,3 @@
-pgConnectionString := postgres://postgres:password@localhost:5432/postgres?sslmode=disable
-
 # Composes the platform that the casino needs
 platform:
 	@docker compose -f ./compose/docker-compose.platform.local.yaml up -d
@@ -43,7 +41,8 @@ test-integration:
 # --- DATABASE ---
 
 psql:
-	@psql "${pgConnectionString}"
+	@set -a; . .env; set +a; \
+	psql "$$PG_CONNECTION_STRING"
 
 name :=
 migration:
@@ -54,11 +53,13 @@ migrate-up:
 		echo "golang-migrate not installed. How to install: https://github.com/golang-migrate/migrate/tree/master/cmd/migrate"; \
 		exit 1; \
 	fi; \
-	migrate -path 'migrations' -database "${pgConnectionString}" up
+	set -a; . .env; set +a; \
+	migrate -path 'migrations' -database "$$PG_CONNECTION_STRING" up
 
 migrate-down:
 	@if ! command -v migrate >/dev/null 2>&1; then \
 		echo "golang-migrate not installed. How to install: https://github.com/golang-migrate/migrate/tree/master/cmd/migrate"; \
 		exit 1; \
 	fi; \
-	migrate -path 'migrations' -database "${pgConnectionString}" down -all
+	set -a; . .env; set +a; \
+	migrate -path 'migrations' -database "$$PG_CONNECTION_STRING" down -all
