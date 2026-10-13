@@ -81,4 +81,4 @@ Add these settings to your JSON. This configures gopls correctly for the build t
 
 ## Swagger 
 
-This project uses swag-go to generate swagger docs. Models that contain a field of "string" type but have a format of "json" are actually JSON objects. This is a limitation of the swag-go library it seems. A Postman collection of API routes can be found in [API.postman_collection.json](./API.postman_collection.json).
+This project uses swag-go to generate swagger docs. Models that contain a field of "string" type but have a format of "json" are actually JSON objects. A Postman collection of API routes can be found in [API.postman_collection.json](./API.postman_collection.json).
