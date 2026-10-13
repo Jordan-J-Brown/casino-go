@@ -3,7 +3,7 @@ module github.com/Jordan-J-Brown/casino-go/casino
 go 1.27
 
 require (
-	github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013140405-72fd91bdecb0
+	github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013150336-7a9fc33a63f2
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/golang-migrate/migrate/v4 v4.20.1
 	github.com/jackc/pgx/v5 v5.11.0

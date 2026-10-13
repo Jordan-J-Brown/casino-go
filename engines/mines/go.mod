@@ -5,7 +5,7 @@ go 1.27.1
 // replace github.com/Jordan-J-Brown/casino-go/pkg => ../../pkg
 
 require (
-	github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013140405-72fd91bdecb0
+	github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013150336-7a9fc33a63f2
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/viper v1.21.0
 )

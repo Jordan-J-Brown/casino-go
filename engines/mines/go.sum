@@ -1,5 +1,7 @@
 github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013140405-72fd91bdecb0 h1:5ptrhmuju1nBTildaR/3cxnYfDj/FQCVtiAJgGv5+Ks=
 github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013140405-72fd91bdecb0/go.mod h1:zLSpPtTBTOk3VAsGu7uwelqK4FLjrMdxkZSwryvCmvU=
+github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013150336-7a9fc33a63f2 h1:h/bRmtqNYOg6EMR9YQ8A7A0+D3Sb0v3uOUjf1lJHZQU=
+github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013150336-7a9fc33a63f2/go.mod h1:zLSpPtTBTOk3VAsGu7uwelqK4FLjrMdxkZSwryvCmvU=
 github.com/cenkalti/backoff/v5 v5.0.3 h1:ZN+IMa753KfX5hd8vVaMixjnqRZ3y8CuJKRKj1xcsSM=
 github.com/cenkalti/backoff/v5 v5.0.3/go.mod h1:rkhZdG3JZukswDf7f0cwqPNk4K0sa+F97BxZthm/crw=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
