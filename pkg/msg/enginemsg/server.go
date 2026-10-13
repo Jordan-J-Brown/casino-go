@@ -77,7 +77,7 @@ func StartServer(
 
 		registerErr := server.registerEngine(ctx)
 		if registerErr != nil {
-			server.logger.ErrorContext(ctx, "failed to register engine after broadcast", "error", err)
+			server.logger.ErrorContext(ctx, "failed to register engine after broadcast", "error", registerErr)
 		}
 	})
 	if err != nil {
