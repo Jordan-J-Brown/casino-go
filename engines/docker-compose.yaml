@@ -1,0 +1,21 @@
+name: casino-engines
+
+services:
+  casino:
+    container_name: ${ENGINE_NAME}
+    image: ${ENGINE_NAME}:${ENGINE_VERSION}
+    environment:
+      SERVICE_NAME: ${ENGINE_NAME}
+      SERVICE_VERSION: ${ENGINE_VERSION}
+      NATS_URL: nats://nats:4222
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_INSECURE: true
+      ENGINE_ID: ${ENGINE_NAME}
+      ENGINE_VERSION: ${ENGINE_VERSION}
+    restart: always
+    networks:
+      - casino-net
+
+networks:
+  casino-net:
+    external: true

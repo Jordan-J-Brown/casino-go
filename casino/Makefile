@@ -17,13 +17,14 @@ run:
 generate:
 	go generate ./...
 
-# Build the docker image for the casino service
-tag :=
 build: 
 	@GITHUB_TOKEN=$$GITHUB_TOKEN \
-	docker build --tag casino:${tag} \
+	docker build --tag casino:local \
 		--secret id=GITHUB_TOKEN \
 		--build-arg CONFIG_PATH=configs/config.prod.yaml .
+
+compose-casino:
+	docker compose -f compose/docker-compose.casino.local.yaml up -d
 
 # Generates swagger docs from godoc comments using the swag-go tool
 swag-init:

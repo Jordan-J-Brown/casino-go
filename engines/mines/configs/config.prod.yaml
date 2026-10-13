@@ -1,0 +1,6 @@
+
+env: prod
+
+logging:
+  type: json
+  level: info

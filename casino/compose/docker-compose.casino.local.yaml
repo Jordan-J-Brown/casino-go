@@ -11,7 +11,7 @@ services:
       NATS_URL: nats://nats:4222
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
       OTEL_EXPORTER_OTLP_INSECURE: true
-      PG_CONNECTION_STRING: postgres://service:password@postgres:5432/service_db?sslmode=disable
+      PG_CONNECTION_STRING: postgres://postgres:password@postgres:5432/postgres?sslmode=disable
     ports:
       - 10000:10000
     restart: always

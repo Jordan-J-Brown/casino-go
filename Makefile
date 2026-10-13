@@ -7,6 +7,20 @@ tidy:
 		cd "$$currentDir"; \
 	done
 
+engine:=
+version:=
+
+build-engine-local:
+	./scripts/build/engine.sh ${engine}
+
+build-engine-prod:
+	./scripts/build/engine.sh ${engine} ${version} prod
+
+compose-engine:
+	ENGINE_NAME=${engine} \
+	ENGINE_VERSION=${version} \
+	docker compose -f "./engines/docker-compose.yaml" up -d
+
 pprof-cpu:
 	@go tool pprof -http : http://localhost:6060/debug/pprof/profile?seconds=15
 
