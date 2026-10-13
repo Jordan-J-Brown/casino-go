@@ -93,6 +93,10 @@ func (base *BaseApplication) RegisterShutdownFunc(name string, fn func(context.C
 }
 
 func (base *BaseApplication) Shutdown(ctx context.Context) {
+	if base == nil {
+		return
+	}
+
 	for _, shutdown := range slices.Backward(base.shutdownFuncs) {
 		base.Logger.DebugContext(ctx, "Running shutdown func", "name", shutdown.name)
 		if err := shutdown.fn(ctx); err != nil {
