@@ -6,6 +6,8 @@ github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c h1:udKWzYgxTojEK
 github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
 github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013134523-732268305388 h1:Mg7ddx5yd2+H9+rpCK3fBud4UNgyXHL5ekhg/ruGNpc=
 github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013134523-732268305388/go.mod h1:ZfQE31I0CacCnF4yKSWTADTamdUp2as65oogjxcEvCw=
+github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013135003-a04a64b788a0 h1:sMsDiKnyRZ8x6pWEBAypVA692PqQw7/lHjoJRt8nLQE=
+github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013135003-a04a64b788a0/go.mod h1:ZfQE31I0CacCnF4yKSWTADTamdUp2as65oogjxcEvCw=
 github.com/KyleBanks/depth v1.2.1 h1:5h8fQADFrWtarTdtDudMmGsC7GPbOAu6RVB3ffsVFHc=
 github.com/KyleBanks/depth v1.2.1/go.mod h1:jzSb9d0L43HxTQfT+oSA1EEp2q+ne2uh6XgeJcm8brE=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
