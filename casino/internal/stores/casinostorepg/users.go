@@ -37,6 +37,27 @@ func (s *Store) GetUserByID(ctx context.Context, id string) (user *usermodels.Us
 	return user, nil
 }
 
+func (s *Store) GetUserByName(ctx context.Context, username string) (*usermodels.User, error) {
+	var user usermodels.User
+	err := s.tx.QueryRow(
+		ctx,
+		`
+		SELECT users.user_id, wallet_id 
+		FROM service.users 
+		JOIN service.user_wallets 
+		ON users.user_id = user_wallets.user_id 
+		WHERE username=$1;`,
+		username,
+	).Scan(&user.ID, &user.WalletID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, usermodels.ErrUserNotFound
+		}
+	}
+
+	return &user, nil
+}
+
 func (s *Store) GetUserFromSessionID(ctx context.Context, sessionIdHash string) (*usermodels.User, error) {
 	user := &usermodels.User{}
 	err := s.tx.QueryRow(ctx, `
@@ -101,12 +122,12 @@ func (s *Store) CreateSessionForUser(
 	user *usermodels.User,
 	expiresAt time.Time,
 ) error {
-	exists, err := s.sessionExists(ctx, sessionIdHash)
+	revoked, err := s.revokeSessionIfExists(ctx, user.ID)
 	if err != nil {
 		return err
 	}
-	if exists {
-		return usermodels.ErrSessionExists
+	if revoked {
+		s.logger.DebugContext(ctx, "User session revoked", "user_id", user.ID)
 	}
 
 	_, err = s.tx.Exec(ctx, `
@@ -171,15 +192,14 @@ func (s *Store) userExists(ctx context.Context, id string) (exists bool, err err
 	return exists, err
 }
 
-func (s *Store) sessionExists(ctx context.Context, sessionIdHash string) (exists bool, err error) {
-	err = s.tx.QueryRow(
-		ctx,
-		`SELECT EXISTS(SELECT 1 FROM service.user_sessions WHERE session_id_hash=$1 AND expires_at > now() AND revoked=false);`,
-		sessionIdHash,
-	).Scan(&exists)
+func (s *Store) revokeSessionIfExists(ctx context.Context, userID string) (revoked bool, err error) {
+	tag, err := s.tx.Exec(ctx, `UPDATE service.user_sessions SET revoked=true WHERE user_id=$1 AND revoked=false;`, userID)
 	if err != nil {
-		err = errorx.New("failed to check if session exists", errorx.WithChildren(err))
+		return false, err
 	}
+
+	revoked = tag.RowsAffected() > 0
+
 	return
 }
 

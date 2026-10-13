@@ -10,6 +10,7 @@ import (
 
 type Store interface {
 	GetUserByID(ctx context.Context, id string) (*usermodels.User, error)
+	GetUserByName(ctx context.Context, name string) (*usermodels.User, error)
 	GetUserFromSessionID(ctx context.Context, sessionIdHash string) (*usermodels.User, error)
 	GetWallet(ctx context.Context, walletID string) (*walletmodels.Wallet, error)
 	CreateUserWithBalance(ctx context.Context, username string, balance int64) (*usermodels.User, error)

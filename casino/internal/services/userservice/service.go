@@ -10,6 +10,7 @@ import (
 
 type Service interface {
 	GetUserByID(ctx context.Context, id string) (*usermodels.User, *errorx.Error)
+	GetUserByName(ctx context.Context, name string) (*usermodels.User, *errorx.Error)
 	GetUserFromSessionID(ctx context.Context, sessionID string) (*usermodels.User, *errorx.Error)
 	GetUserBalance(ctx context.Context, user *usermodels.User) (int64, *errorx.Error)
 	CreateUserWithBalance(ctx context.Context, username string, balance int64) (*usermodels.User, *errorx.Error)
@@ -49,6 +50,32 @@ func (s *service) GetUserByID(ctx context.Context, id string) (user *usermodels.
 	}
 
 	return
+}
+
+func (s *service) GetUserByName(ctx context.Context, name string) (*usermodels.User, *errorx.Error) {
+	if !isValidUsername(name) {
+		return nil, errorx.NewFromType(usermodels.ErrInvalidUsername.Error(), errorx.WithCode(errorx.ClientError))
+	}
+
+	var user *usermodels.User
+	storeErr := s.StoreProvider.UseStore(ctx, func(store Store) error {
+		userFromStore, err := store.GetUserByName(ctx, name)
+		if err != nil {
+			return err
+		}
+
+		user = userFromStore
+
+		return nil
+	})
+	if storeErr != nil {
+		if storeErr == usermodels.ErrUserNotFound {
+			return nil, errorx.NewFromType(string(usermodels.ErrUserNotFound), errorx.WithCode(errorx.ClientError))
+		}
+		return nil, errorx.Newf("failed to retrieve user '%s' from store.", name, errorx.WithChildren(storeErr))
+	}
+
+	return user, nil
 }
 
 func (s *service) GetUserFromSessionID(ctx context.Context, sessionID string) (user *usermodels.User, err *errorx.Error) {

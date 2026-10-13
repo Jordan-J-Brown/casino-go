@@ -12,6 +12,7 @@ import (
 	"github.com/Jordan-J-Brown/casino-go/casino/internal/services/userservice"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/requests"
 	"github.com/Jordan-J-Brown/casino-go/casino/pkg/responses"
+	"github.com/Jordan-J-Brown/casino-go/pkg/errorx"
 	"github.com/Jordan-J-Brown/casino-go/pkg/logsx"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -58,12 +59,27 @@ func (h *Handler) Authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.userService.CreateUserWithBalance(ctx, request.Username, request.Balance)
-	if err != nil {
-		h.Logger.ErrorContext(ctx, "failed to create user", "request", request, "error", err)
-		h.HandleError(ctx, w, err)
-		return
+	var user *usermodels.User
+	if request.Balance > 0 {
+		var err *errorx.Error
+		user, err = h.userService.CreateUserWithBalance(ctx, request.Username, request.Balance)
+		if err != nil {
+			h.Logger.ErrorContext(ctx, "failed to create user", "error", err)
+			h.HandleError(ctx, w, err)
+			return
+		}
+	} else {
+		var err *errorx.Error
+		user, err = h.userService.GetUserByName(ctx, request.Username)
+		if err != nil {
+			if err.Type() != string(usermodels.ErrUserNotFound) {
+				h.Logger.ErrorContext(ctx, "failed to get user by name", "error", err)
+			}
+			h.respondNotAuthenticated(ctx, w)
+			return
+		}
 	}
+
 	sessionID, err := h.userService.CreateSessionForUser(ctx, user)
 	if err != nil {
 		h.Logger.ErrorContext(ctx, "failed to create session for user", "error", err, "user", user)
@@ -115,13 +131,17 @@ func (h *Handler) Middleware(next http.Handler) http.Handler {
 			return
 		}
 		if user == nil {
-			h.ReplyErrorJSON(ctx, w, "NOT_AUTHENTICATED", http.StatusUnauthorized)
+			h.respondNotAuthenticated(ctx, w)
 			return
 		}
 
 		ctx = context.WithValue(ctx, usermodels.CtxKeyUser, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func (h *Handler) respondNotAuthenticated(ctx context.Context, w http.ResponseWriter) {
+	h.ReplyErrorJSON(ctx, w, "NOT_AUTHENTICATED", http.StatusUnauthorized)
 }
 
 type body struct {
