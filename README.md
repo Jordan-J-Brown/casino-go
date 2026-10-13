@@ -1,12 +1,10 @@
 # Casino-Go
 
-## Project overview
-
-This project is an online casino/Remote Game Server (RGS) built in Golang. Engines connect to the casino service via NATS.
-
 ### Disclaimer
 
-This is just a portfolio/hobby project and does not represent a production worthy RGS. It serves as a place to demonstrate the knowledge and skills I have obtained building backend services using Golang.
+This is just a portfolio/hobby project and does not represent a production worthy online casino. It serves as a place to demonstrate the knowledge and skills I have obtained building backend services using Golang.
+
+## Project overview
 
 ### Projects
 - `./casino` - Casino project that handles the core functionality. 
@@ -23,9 +21,9 @@ This is just a portfolio/hobby project and does not represent a production worth
 - Casino stress test CLI. It can be started within the stress-test directory using `make run-mines games={n_games}`.
 - Profiling of services via build tags. All services use the `profile` tag to start up the default profiling server. The Makefile located in the project's root directory contains useful pprof commands to view profiling data. To profile the casino as an example, run `make run-profile` within the casino directory then `make pprof-cpu` from the project's root directory.
 
-### Future improvements 
-- Multiplayer games using web sockets (poker, blackjack).
-- Implement real authentication handling. Currently the authentication endpoint just creates a new player with a balance to play the engines.
+### Architecture
+
+![Image of the backend architecture](architecture.drawio.png)
 
 ## Running the casino locally
 
