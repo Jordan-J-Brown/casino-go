@@ -4,8 +4,6 @@ github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 h1:He8af
 github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6/go.mod h1:8o94RPi1/7XTJvwPpRSzSUedZrtlirdB3r9Z20bi2f8=
 github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c h1:udKWzYgxTojEKWjV8V+WSxDXJ4NFATAsZjh8iIbsQIg=
 github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
-github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013140405-72fd91bdecb0 h1:5ptrhmuju1nBTildaR/3cxnYfDj/FQCVtiAJgGv5+Ks=
-github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013140405-72fd91bdecb0/go.mod h1:zLSpPtTBTOk3VAsGu7uwelqK4FLjrMdxkZSwryvCmvU=
 github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013150336-7a9fc33a63f2 h1:h/bRmtqNYOg6EMR9YQ8A7A0+D3Sb0v3uOUjf1lJHZQU=
 github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261013150336-7a9fc33a63f2/go.mod h1:zLSpPtTBTOk3VAsGu7uwelqK4FLjrMdxkZSwryvCmvU=
 github.com/KyleBanks/depth v1.2.1 h1:5h8fQADFrWtarTdtDudMmGsC7GPbOAu6RVB3ffsVFHc=
