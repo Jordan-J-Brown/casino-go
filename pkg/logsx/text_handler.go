@@ -8,16 +8,12 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/Jordan-J-Brown/casino-go/pkg/ansi"
 	"github.com/Jordan-J-Brown/casino-go/pkg/contextx"
 )
-
-type baseHandler struct {
-}
 
 type TextHandler struct {
 	*slog.TextHandler
@@ -49,7 +45,9 @@ func NewTextHandler(w io.Writer, opts *slog.HandlerOptions) *TextHandler {
 }
 
 func (t *TextHandler) Handle(ctx context.Context, r slog.Record) error {
-	//{timestamp} {coloured_level} {file} {correlation_id} {msg} {args...}
+	// TODO: add "{package_name}/{file}:{column}" to log.
+
+	//{timestamp} {coloured_level} {correlation_id} {msg} {args...}
 
 	buff := t.buffPool.Get().(*bytes.Buffer)
 	defer func() {
@@ -63,18 +61,6 @@ func (t *TextHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	//Level
 	writeLevel(buff, r.Level)
-	buff.WriteByte(' ')
-
-	//File
-	src := r.Source()
-	filePath, err := filepath.Rel(t.workingDir, src.File)
-	if err != nil {
-		return err
-	}
-	buff.WriteString("./")
-	buff.WriteString(filePath)
-	buff.WriteByte(':')
-	buff.WriteString(strconv.Itoa(src.Line))
 	buff.WriteByte(' ')
 
 	cid := contextx.CorrelationIdFromContext(ctx)
@@ -103,7 +89,7 @@ func (t *TextHandler) Handle(ctx context.Context, r slog.Record) error {
 	buff.WriteByte('}')
 	buff.WriteByte('\n')
 
-	_, err = t.w.Write(buff.Bytes())
+	_, err := t.w.Write(buff.Bytes())
 
 	return err
 }
