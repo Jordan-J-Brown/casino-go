@@ -25,13 +25,8 @@ This is just a portfolio/hobby project and does not represent a production worth
 
 ![Image of the backend architecture](architecture.drawio.png)
 
-## Running the casino locally
-
-From within the casino directory:
-1. Run `make platform` to compose core containers (NATS, Postgres etc).
-2. Run `make migrate-up` to initialise the DB. 
-3. Run `make run`.
-4. Within the `./engines/mines` directory, run `make run` to start the mines engine.
+## Running the project locally
+Run `make quick-start` from the project root. 
 
 ## Database
 
@@ -79,4 +74,4 @@ Add these settings to your JSON. This configures gopls correctly for the build t
 
 ## Swagger 
 
-This project uses swag-go to generate swagger docs. Models that contain a field of "string" type but have a format of "json" are actually JSON objects. A Postman collection of API routes can be found in [API.postman_collection.json](./casino/API.postman_collection.json).
+This project uses swag-go to generate swagger docs. Models that contain a field of "string" type but have a format of "json" are actually JSON objects. A Postman collection of API routes can be found in [API.postman_collection.json](./casino/API.postman_collection.json). Visit http://localhost:10000/swagger/index.html to see the endpoints available.
