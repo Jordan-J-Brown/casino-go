@@ -1,3 +1,7 @@
+# Starts up the platform, casino and a mines engine from scratch
+quick-start:
+	./scripts/start.sh
+
 tidy:
 	@dirs=(./casino ./pkg ./engines/mines); \
 	currentDir=$$(pwd); \
