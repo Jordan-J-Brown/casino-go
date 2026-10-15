@@ -13,6 +13,8 @@ services:
       ENGINE_ID: ${ENGINE_NAME}
       ENGINE_VERSION: ${ENGINE_VERSION}
     restart: always
+    ports:
+      - :6060
     networks:
       - casino-net
 

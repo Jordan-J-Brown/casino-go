@@ -27,6 +27,8 @@ func main() {
 		},
 	})
 
+	logger.DebugContext(ctx, "Starting casino...")
+
 	app, err := casinoapp.Run(ctx, logger, cfg)
 	if err != nil {
 		panic(err)

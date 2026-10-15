@@ -1,5 +1,6 @@
 # ! /bin/bash
-currentDir="$(pwd)"
+readonly pkgPath="$(realpath ./pkg)"
+readonly originalDir="$(pwd)"
 
 engine="$1"
 if [[ -z "$engine" ]]; then
@@ -32,9 +33,21 @@ fi
 dockerTag="${registry}${engine}:${tag}"
 echo "Building engine as: ${dockerTag}"
 
-GITHUB_TOKEN=$GITHUB_TOKEN docker build --tag "${dockerTag}" \
-		--secret id=GITHUB_TOKEN \
-		--build-arg CONFIG_PATH="${configPath}" \
-    --file ../Dockerfile .
+flags=(
+  "--tag=${dockerTag}"
+	"--build-context=pkg=${pkgPath}"
+  "--build-context=gocache=$(go env GOCACHE)"	
+  "--build-context=gomodcache=$(go env GOMODCACHE)"	
+	"--build-arg=CONFIG_PATH=${configPath}"
+  '--file=../local.Dockerfile'
+)
+if [[ -n "$NO_CACHE" ]]; then 
+  flags+=('--no-cache')
+fi
+if [[ -n "$PROFILE" ]]; then 
+  flags+=('--build-arg=BUILD_TAGS=profile')
+fi
 
-cd "$currentDir"
+docker build "${flags[@]}" .
+
+cd "$originalDir"

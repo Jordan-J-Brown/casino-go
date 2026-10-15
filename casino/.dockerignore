@@ -1,0 +1,7 @@
+compose
+configs
+migrations
+.env
+API.postman_collection.json
+*.Dockerfile
+Makefile

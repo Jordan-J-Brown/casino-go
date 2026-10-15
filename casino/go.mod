@@ -2,6 +2,8 @@ module github.com/Jordan-J-Brown/casino-go/casino
 
 go 1.27
 
+replace github.com/Jordan-J-Brown/casino-go/pkg => ../pkg
+
 require (
 	github.com/Jordan-J-Brown/casino-go/pkg v0.0.0-20261014144933-1ed7d4966507
 	github.com/go-chi/chi/v5 v5.3.2
